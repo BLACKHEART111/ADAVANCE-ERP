@@ -70,7 +70,7 @@ fun MoreHubScreen(
         MoreHubItem("customers", R.string.nav_customers, "Wholesale & retail clients", Icons.Default.Group, Color(0xFF16A34A)),
         MoreHubItem("suppliers", R.string.nav_suppliers, "China factory partners", Icons.Default.Storefront, Color(0xFFD97706)),
         MoreHubItem("ledger", R.string.nav_ledger, "Customer & supplier ledger", Icons.Default.MenuBook, Color(0xFF7C3AED)),
-        MoreHubItem("reports", R.string.nav_reports, "P&L and Balance Sheet", Icons.Default.Assessment, Color(0xFF059669)),
+        MoreHubItem("reports", R.string.nav_reports, "Business Control Center & Ledgers", Icons.Default.Assessment, Color(0xFF059669)),
         MoreHubItem("settings", R.string.nav_settings, "Language, currency & profile", Icons.Default.Settings, Color(0xFF475569))
     )
 

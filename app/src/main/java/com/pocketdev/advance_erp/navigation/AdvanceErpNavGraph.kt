@@ -6,10 +6,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.pocketdev.advance_erp.domain.model.ReportCategory
 import com.pocketdev.advance_erp.feature.accounts.AccountsScreen
 import com.pocketdev.advance_erp.feature.accounts.AccountsTab
 import com.pocketdev.advance_erp.feature.contacts.ContactsScreen
 import com.pocketdev.advance_erp.feature.contacts.ContactsTab
+import com.pocketdev.advance_erp.feature.controlcenter.BusinessControlCenterScreen
 import com.pocketdev.advance_erp.feature.dashboard.DashboardScreen
 import com.pocketdev.advance_erp.feature.imports.ImportManagementScreen
 import com.pocketdev.advance_erp.feature.imports.ImportModuleTab
@@ -98,11 +100,11 @@ fun AdvanceErpNavGraph(
         }
 
         composable(Destinations.LEDGER) {
-            AccountsScreen(initialTab = AccountsTab.JOURNAL)
+            BusinessControlCenterScreen(viewModel = hiltViewModel(), initialCategory = ReportCategory.CUSTOMER_LEDGER)
         }
 
         composable(Destinations.REPORTS) {
-            AccountsScreen(initialTab = AccountsTab.STATEMENTS)
+            BusinessControlCenterScreen(viewModel = hiltViewModel())
         }
 
         composable(Destinations.SETTINGS) {

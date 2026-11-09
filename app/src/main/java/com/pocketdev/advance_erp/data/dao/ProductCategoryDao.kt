@@ -14,6 +14,9 @@ interface ProductCategoryDao {
     @Query("SELECT * FROM product_categories ORDER BY nameEn ASC")
     fun getAllCategories(): Flow<List<ProductCategory>>
 
+    @Query("SELECT * FROM product_categories ORDER BY nameEn ASC")
+    suspend fun getAllCategoriesSync(): List<ProductCategory>
+
     @Query("SELECT * FROM product_categories WHERE id = :id LIMIT 1")
     suspend fun getCategoryById(id: String): ProductCategory?
 

@@ -15,7 +15,9 @@
     <string name="nav_customers">গ্রাহকবৃন্দ</string>
     <string name="nav_suppliers">সরবরাহকারী</string>
     <string name="nav_ledger">খতিয়ান</string>
-    <string name="nav_reports">প্রতিবেদন</string>
+    <string name="nav_reports">ব্যবসা নিয়ন্ত্রণ কেন্দ্র</string>
+    <string name="business_control_center">ব্যবসা নিয়ন্ত্রণ কেন্দ্র</string>
+    <string name="centralized_ledger_reports">কেন্দ্রীয় লেজার, হিসাব বিবরণী ও এক্সপোর্ট</string>
     <string name="nav_settings">সেটিংস</string>
 
     <!-- Drawer Menu Items & Header -->

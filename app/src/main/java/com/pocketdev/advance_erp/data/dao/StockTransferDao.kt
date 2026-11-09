@@ -72,6 +72,23 @@ interface StockTransferDao {
         INNER JOIN warehouses w2 ON st.destinationWarehouseId = w2.id
         INNER JOIN products p ON st.productId = p.id
         LEFT JOIN product_variants pv ON st.variantId = pv.id
+        ORDER BY st.createdAt DESC
+    """)
+    suspend fun getAllTransfersWithDetailsSync(): List<StockTransferWithDetails>
+
+    @Query("""
+        SELECT st.*, 
+               w1.name as sourceWarehouseName, 
+               w2.name as destinationWarehouseName,
+               p.nameEn as productNameEn, 
+               p.nameBn as productNameBn, 
+               p.baseSku as baseSku,
+               pv.sku as variantSku
+        FROM stock_transfers st
+        INNER JOIN warehouses w1 ON st.sourceWarehouseId = w1.id
+        INNER JOIN warehouses w2 ON st.destinationWarehouseId = w2.id
+        INNER JOIN products p ON st.productId = p.id
+        LEFT JOIN product_variants pv ON st.variantId = pv.id
         WHERE st.sourceWarehouseId = :warehouseId OR st.destinationWarehouseId = :warehouseId
         ORDER BY st.createdAt DESC
     """)

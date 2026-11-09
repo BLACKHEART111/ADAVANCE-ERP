@@ -15,7 +15,9 @@
     <string name="nav_customers">Customers</string>
     <string name="nav_suppliers">Suppliers</string>
     <string name="nav_ledger">Ledger</string>
-    <string name="nav_reports">Reports</string>
+    <string name="nav_reports">Business Control Center</string>
+    <string name="business_control_center">Business Control Center</string>
+    <string name="centralized_ledger_reports">Centralized Business Ledger, Reports &amp; Export</string>
     <string name="nav_settings">Settings</string>
 
     <!-- Drawer Menu Items & Header -->

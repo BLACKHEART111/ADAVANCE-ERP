@@ -14,6 +14,12 @@ interface SupplierDao {
     @Query("SELECT * FROM suppliers WHERE isActive = 1 ORDER BY companyName ASC")
     fun getAllSuppliers(): Flow<List<Supplier>>
 
+    @Query("SELECT * FROM suppliers WHERE isActive = 1 ORDER BY companyName ASC")
+    suspend fun getAllSuppliersSync(): List<Supplier>
+
+    @Query("SELECT * FROM suppliers ORDER BY companyName ASC")
+    suspend fun getAllSuppliersIncludingInactiveSync(): List<Supplier>
+
     @Query("SELECT * FROM suppliers WHERE id = :id LIMIT 1")
     suspend fun getSupplierById(id: String): Supplier?
 
