@@ -1,5 +1,6 @@
 package com.pocketdev.advance_erp
 
+import com.pocketdev.advance_erp.core.util.Formatters
 import com.pocketdev.advance_erp.core.util.QrCodeGenerator
 import com.pocketdev.advance_erp.data.dao.ProductWithDetails
 import com.pocketdev.advance_erp.data.entity.Product
@@ -84,37 +85,35 @@ class InventoryScannerIntegrationTest {
         val code = rawCode.trim()
         if (code.isEmpty()) return null
 
-        // 1. Check structured QR payload
-        if (code.startsWith("ADV-ERP|PRODUCT|")) {
-            val parts = code.split("|")
-            if (parts.size >= 4) {
-                val prodId = parts[2]
-                val prod = products.firstOrNull { it.id == prodId }
-                if (prod != null) {
-                    return ResolvedProductItem(product = prod, matchedVariant = null, matchedCode = code, matchType = "QR_PRODUCT")
-                }
+        val qr = QrCodeGenerator.parsePayload(code)
+        if (qr.type == QrCodeGenerator.QrType.PRODUCT) {
+            val prod = products.firstOrNull { it.id == qr.targetId || it.baseSku.equals(qr.targetId, ignoreCase = true) || it.baseSku.equals(qr.code, ignoreCase = true) }
+            if (prod != null) {
+                return ResolvedProductItem(product = prod, matchedVariant = null, matchedCode = code, matchType = "QR_PRODUCT")
             }
-        } else if (code.startsWith("ADV-ERP|VARIANT|")) {
-            val parts = code.split("|")
-            if (parts.size >= 5) {
-                val varId = parts[2]
-                val prodId = parts[3]
-                val prod = products.firstOrNull { it.id == prodId }
-                val variant = variants.firstOrNull { it.id == varId }
-                if (prod != null) {
-                    return ResolvedProductItem(product = prod, matchedVariant = variant, matchedCode = code, matchType = "QR_VARIANT")
-                }
+        } else if (qr.type == QrCodeGenerator.QrType.VARIANT) {
+            val variant = variants.firstOrNull { it.id == qr.targetId || it.sku.equals(qr.targetId, ignoreCase = true) || it.sku.equals(qr.code, ignoreCase = true) }
+            val prod = if (variant != null) {
+                products.firstOrNull { it.id == variant.productId }
+            } else if (!qr.secondaryId.isNullOrBlank()) {
+                products.firstOrNull { it.id == qr.secondaryId }
+            } else null
+
+            if (prod != null) {
+                return ResolvedProductItem(product = prod, matchedVariant = variant, matchedCode = code, matchType = "QR_VARIANT")
             }
         }
 
+        val norm = Formatters.toEnglishDigits(code)
+
         // 2. Exact match product barcode
-        val prodByBarcode = products.firstOrNull { it.barcode?.equals(code, ignoreCase = true) == true }
+        val prodByBarcode = products.firstOrNull { it.barcode?.equals(code, ignoreCase = true) == true || (norm != code && it.barcode?.equals(norm, ignoreCase = true) == true) }
         if (prodByBarcode != null) {
             return ResolvedProductItem(product = prodByBarcode, matchedVariant = null, matchedCode = code, matchType = "BARCODE_PRODUCT")
         }
 
         // 3. Exact match variant barcode
-        val varByBarcode = variants.firstOrNull { it.barcode?.equals(code, ignoreCase = true) == true }
+        val varByBarcode = variants.firstOrNull { it.barcode?.equals(code, ignoreCase = true) == true || (norm != code && it.barcode?.equals(norm, ignoreCase = true) == true) }
         if (varByBarcode != null) {
             val parent = products.firstOrNull { it.id == varByBarcode.productId }
             if (parent != null) {
@@ -123,13 +122,13 @@ class InventoryScannerIntegrationTest {
         }
 
         // 4. Exact match product base SKU
-        val prodBySku = products.firstOrNull { it.baseSku.equals(code, ignoreCase = true) }
+        val prodBySku = products.firstOrNull { it.baseSku.equals(code, ignoreCase = true) || it.baseSku.equals(norm, ignoreCase = true) }
         if (prodBySku != null) {
             return ResolvedProductItem(product = prodBySku, matchedVariant = null, matchedCode = code, matchType = "SKU_PRODUCT")
         }
 
         // 5. Exact match variant SKU
-        val varBySku = variants.firstOrNull { it.sku.equals(code, ignoreCase = true) }
+        val varBySku = variants.firstOrNull { it.sku.equals(code, ignoreCase = true) || it.sku.equals(norm, ignoreCase = true) }
         if (varBySku != null) {
             val parent = products.firstOrNull { it.id == varBySku.productId }
             if (parent != null) {
@@ -195,6 +194,49 @@ class InventoryScannerIntegrationTest {
         assertNotNull(result.matchedVariant)
         assertEquals("var-red-01", result.matchedVariant!!.id)
         assertEquals("QR_VARIANT", result.matchType)
+    }
+
+    @Test
+    fun testResolveProductByNewQrCodePrefix() {
+        val result = resolveCode("ADV-ERP:PRD|prod-p1|CLO-POLO-001")
+        assertNotNull(result)
+        assertEquals("prod-p1", result!!.product.id)
+        assertNull(result.matchedVariant)
+        assertEquals("QR_PRODUCT", result.matchType)
+    }
+
+    @Test
+    fun testResolveVariantByNewQrCodePrefix() {
+        val result = resolveCode("ADV-ERP:VAR|var-red-01|prod-p1|CLO-POLO-001-RED")
+        assertNotNull(result)
+        assertEquals("prod-p1", result!!.product.id)
+        assertNotNull(result.matchedVariant)
+        assertEquals("var-red-01", result.matchedVariant!!.id)
+        assertEquals("QR_VARIANT", result.matchType)
+    }
+
+    @Test
+    fun testResolveBarcodeInBengaliDigits() {
+        val bnBarcode = Formatters.toBanglaDigits("890123456790")
+        val result = resolveCode(bnBarcode)
+        assertNotNull("Should resolve barcode with Bengali numerals", result)
+        assertEquals("prod-p1", result!!.product.id)
+        assertEquals("var-red-01", result.matchedVariant!!.id)
+    }
+
+    @Test
+    fun testParsePayloadBothFormats() {
+        val payloadNew = QrCodeGenerator.parsePayload("ADV-ERP:VAR|v-123|p-456|SKU-99")
+        assertEquals(QrCodeGenerator.QrType.VARIANT, payloadNew.type)
+        assertEquals("v-123", payloadNew.targetId)
+        assertEquals("p-456", payloadNew.secondaryId)
+        assertEquals("SKU-99", payloadNew.code)
+
+        val payloadOld = QrCodeGenerator.parsePayload("ADV-ERP|VARIANT|v-123|p-456|SKU-99")
+        assertEquals(QrCodeGenerator.QrType.VARIANT, payloadOld.type)
+        assertEquals("v-123", payloadOld.targetId)
+        assertEquals("p-456", payloadOld.secondaryId)
+        assertEquals("SKU-99", payloadOld.code)
     }
 
     @Test

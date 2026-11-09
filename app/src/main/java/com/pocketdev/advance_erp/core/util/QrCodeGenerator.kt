@@ -51,19 +51,8 @@ object QrCodeGenerator {
      */
     fun parsePayload(scanned: String): QrPayload {
         val trimmed = scanned.trim()
-        if (trimmed.startsWith("$QR_PREFIX_PRODUCT|")) {
-            val parts = trimmed.split("|")
-            val id = parts.getOrNull(2) ?: ""
-            val sku = parts.getOrNull(3)
-            return QrPayload(QrType.PRODUCT, targetId = id, code = sku)
-        }
-        if (trimmed.startsWith("$QR_PREFIX_VARIANT|")) {
-            val parts = trimmed.split("|")
-            val varId = parts.getOrNull(2) ?: ""
-            val prodId = parts.getOrNull(3)
-            val sku = parts.getOrNull(4)
-            return QrPayload(QrType.VARIANT, targetId = varId, secondaryId = prodId, code = sku)
-        }
+
+        // 1. Colon-delimited simple format: ADV-ERP:PRD:<id>
         if (trimmed.startsWith("ADV-ERP:PRD:")) {
             val id = trimmed.removePrefix("ADV-ERP:PRD:").trim()
             return QrPayload(QrType.PRODUCT, targetId = id)
@@ -72,6 +61,41 @@ object QrCodeGenerator {
             val id = trimmed.removePrefix("ADV-ERP:VAR:").trim()
             return QrPayload(QrType.VARIANT, targetId = id)
         }
+
+        // 2. Short prefix pipe format: ADV-ERP:PRD|<prodId>|<sku>
+        if (trimmed.startsWith("ADV-ERP:PRD|")) {
+            val parts = trimmed.split("|")
+            val id = parts.getOrNull(1) ?: ""
+            val sku = parts.getOrNull(2)
+            return QrPayload(QrType.PRODUCT, targetId = id, code = sku)
+        }
+
+        // 3. Short prefix variant pipe format: ADV-ERP:VAR|<varId>|<prodId>|<sku>
+        if (trimmed.startsWith("ADV-ERP:VAR|")) {
+            val parts = trimmed.split("|")
+            val varId = parts.getOrNull(1) ?: ""
+            val prodId = parts.getOrNull(2)
+            val sku = parts.getOrNull(3)
+            return QrPayload(QrType.VARIANT, targetId = varId, secondaryId = prodId, code = sku)
+        }
+
+        // 4. Full pipe format: ADV-ERP|PRODUCT|<prodId>|<sku>
+        if (trimmed.startsWith("ADV-ERP|PRODUCT|")) {
+            val parts = trimmed.split("|")
+            val id = parts.getOrNull(2) ?: ""
+            val sku = parts.getOrNull(3)
+            return QrPayload(QrType.PRODUCT, targetId = id, code = sku)
+        }
+
+        // 5. Full pipe format variant: ADV-ERP|VARIANT|<varId>|<prodId>|<sku>
+        if (trimmed.startsWith("ADV-ERP|VARIANT|")) {
+            val parts = trimmed.split("|")
+            val varId = parts.getOrNull(2) ?: ""
+            val prodId = parts.getOrNull(3)
+            val sku = parts.getOrNull(4)
+            return QrPayload(QrType.VARIANT, targetId = varId, secondaryId = prodId, code = sku)
+        }
+
         return QrPayload(QrType.PLAIN_TEXT, targetId = trimmed, code = trimmed)
     }
 

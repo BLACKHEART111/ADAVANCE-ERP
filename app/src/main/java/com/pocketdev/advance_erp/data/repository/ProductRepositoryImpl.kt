@@ -3,6 +3,7 @@ package com.pocketdev.advance_erp.data.repository
 import androidx.room.withTransaction
 import com.pocketdev.advance_erp.core.database.AdvanceErpDatabase
 import com.pocketdev.advance_erp.core.util.BarcodeGenerator
+import com.pocketdev.advance_erp.core.util.Formatters
 import com.pocketdev.advance_erp.core.util.MovementNumberGenerator
 import com.pocketdev.advance_erp.core.util.ProductImageStorage
 import com.pocketdev.advance_erp.core.util.QrCodeGenerator
@@ -483,6 +484,7 @@ class ProductRepositoryImpl @Inject constructor(
         if (qr.type == QrCodeGenerator.QrType.PRODUCT) {
             val prod = getProductWithDetailsById(qr.targetId)
                 ?: productDao.getProductBySku(qr.targetId)?.let { getProductWithDetailsById(it.id) }
+                ?: (if (!qr.code.isNullOrBlank()) productDao.getProductBySku(qr.code)?.let { getProductWithDetailsById(it.id) } else null)
                 ?: productDao.getProductByQrCode(trimmed)?.let { getProductWithDetailsById(it.id) }
 
             if (prod != null) {
@@ -491,6 +493,7 @@ class ProductRepositoryImpl @Inject constructor(
         } else if (qr.type == QrCodeGenerator.QrType.VARIANT) {
             val variant = variantDao.getVariantById(qr.targetId)
                 ?: variantDao.getVariantBySku(qr.targetId)
+                ?: (if (!qr.code.isNullOrBlank()) variantDao.getVariantBySku(qr.code) else null)
                 ?: variantDao.getVariantByQrCode(trimmed)
 
             if (variant != null) {
@@ -498,11 +501,23 @@ class ProductRepositoryImpl @Inject constructor(
                 if (prod != null) {
                     return ResolvedProductItem(prod, variant, trimmed, "QR_VARIANT")
                 }
+            } else if (!qr.secondaryId.isNullOrBlank()) {
+                val prod = getProductWithDetailsById(qr.secondaryId)
+                if (prod != null) {
+                    val prodVariants = variantDao.getVariantsForProductSync(prod.id)
+                    val matchedVar = prodVariants.firstOrNull { 
+                        it.id == qr.targetId || (qr.code != null && it.sku.equals(qr.code, ignoreCase = true))
+                    }
+                    return ResolvedProductItem(prod, matchedVar, trimmed, "QR_VARIANT")
+                }
             }
         }
 
+        val normalized = Formatters.toEnglishDigits(trimmed)
+
         // 2. Try Exact Product Barcode
         val prodByBarcode = productDao.getProductByBarcode(trimmed)
+            ?: (if (normalized != trimmed) productDao.getProductByBarcode(normalized) else null)
         if (prodByBarcode != null) {
             val details = getProductWithDetailsById(prodByBarcode.id)
             if (details != null) {
@@ -512,6 +527,7 @@ class ProductRepositoryImpl @Inject constructor(
 
         // 3. Try Exact Variant Barcode
         val variantByBarcode = variantDao.getVariantByBarcode(trimmed)
+            ?: (if (normalized != trimmed) variantDao.getVariantByBarcode(normalized) else null)
         if (variantByBarcode != null) {
             val details = getProductWithDetailsById(variantByBarcode.productId)
             if (details != null) {
@@ -520,7 +536,9 @@ class ProductRepositoryImpl @Inject constructor(
         }
 
         // 4. Try Exact Product Base SKU
-        val prodBySku = productDao.getProductBySku(trimmed.uppercase())
+        val prodBySku = productDao.getProductBySku(trimmed)
+            ?: productDao.getProductBySku(trimmed.uppercase())
+            ?: (if (normalized != trimmed) productDao.getProductBySku(normalized) ?: productDao.getProductBySku(normalized.uppercase()) else null)
         if (prodBySku != null) {
             val details = getProductWithDetailsById(prodBySku.id)
             if (details != null) {
@@ -529,7 +547,9 @@ class ProductRepositoryImpl @Inject constructor(
         }
 
         // 5. Try Exact Variant SKU
-        val variantBySku = variantDao.getVariantBySku(trimmed.uppercase())
+        val variantBySku = variantDao.getVariantBySku(trimmed)
+            ?: variantDao.getVariantBySku(trimmed.uppercase())
+            ?: (if (normalized != trimmed) variantDao.getVariantBySku(normalized) ?: variantDao.getVariantBySku(normalized.uppercase()) else null)
         if (variantBySku != null) {
             val details = getProductWithDetailsById(variantBySku.productId)
             if (details != null) {

@@ -581,7 +581,8 @@ class InventoryViewModel @Inject constructor(
                     val variantId = resolved.matchedVariant?.id
                     openProductDetail(resolved.product.id, variantId)
                 } else {
-                    _userMessage.value = "No product found for scanned code: $code"
+                    val isBn = uiState.value.language == AppLanguage.BANGLA
+                    _userMessage.value = if (isBn) "কোন পণ্য পাওয়া যায়নি (কোড: $trimmed)" else "No product found for scanned code: $trimmed"
                 }
             } catch (e: Exception) {
                 _userMessage.value = "Error resolving code: ${e.message}"

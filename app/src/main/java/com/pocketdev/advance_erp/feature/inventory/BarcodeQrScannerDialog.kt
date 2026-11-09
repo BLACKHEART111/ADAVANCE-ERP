@@ -1,24 +1,19 @@
 package com.pocketdev.advance_erp.feature.inventory
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.util.Size
+import android.view.MotionEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.common.InputImage
-import java.util.concurrent.Executors
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -27,7 +22,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,9 +40,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Divider
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,7 +51,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -66,15 +62,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
 import com.pocketdev.advance_erp.core.designsystem.ERPActionButton
 import com.pocketdev.advance_erp.core.designsystem.ERPButtonVariant
 import com.pocketdev.advance_erp.core.designsystem.PrimaryPurple
@@ -82,7 +89,11 @@ import com.pocketdev.advance_erp.core.designsystem.SecondaryTeal
 import com.pocketdev.advance_erp.core.designsystem.StatusSuccess
 import com.pocketdev.advance_erp.core.designsystem.TextMuted
 import com.pocketdev.advance_erp.core.model.AppLanguage
+import kotlinx.coroutines.delay
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
+@SuppressLint("ClickableViewAccessibility")
 @Composable
 fun BarcodeQrScannerDialog(
     language: AppLanguage,
@@ -91,13 +102,19 @@ fun BarcodeQrScannerDialog(
 ) {
     var manualCodeInput by remember { mutableStateOf("") }
     var isFlashOn by remember { mutableStateOf(false) }
-    var hasScanned by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
+    var zoomLevel by remember { mutableFloatStateOf(1.0f) }
+    var isScanningPaused by remember { mutableStateOf(false) }
+    var isSuccessHighlight by remember { mutableStateOf(false) }
+    var lastScannedCode by remember { mutableStateOf<String?>(null) }
+    var tapFocusPoint by remember { mutableStateOf<Offset?>(null) }
 
+    val focusManager = LocalFocusManager.current
+    val haptic = LocalHapticFeedback.current
     val isBangla = language == AppLanguage.BANGLA
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
@@ -106,20 +123,44 @@ fun BarcodeQrScannerDialog(
     }
     var permissionDenied by remember { mutableStateOf(false) }
     var camera by remember { mutableStateOf<Camera?>(null) }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         hasCameraPermission = granted
         permissionDenied = !granted
     }
+
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
     }
+
     LaunchedEffect(isFlashOn, camera) {
         camera?.takeIf { it.cameraInfo.hasFlashUnit() }?.cameraControl?.enableTorch(isFlashOn)
     }
 
-    // Infinite animation for scanning laser line
+    LaunchedEffect(zoomLevel, camera) {
+        camera?.cameraControl?.setZoomRatio(zoomLevel)
+    }
+
+    // Auto-resume scanner after 2.5 seconds if dialog is still active
+    LaunchedEffect(isScanningPaused) {
+        if (isScanningPaused) {
+            delay(2500)
+            isSuccessHighlight = false
+            isScanningPaused = false
+        }
+    }
+
+    // Clear tap focus indicator after 1 second
+    LaunchedEffect(tapFocusPoint) {
+        if (tapFocusPoint != null) {
+            delay(1000)
+            tapFocusPoint = null
+        }
+    }
+
+    // Laser line animation
     val infiniteTransition = rememberInfiniteTransition(label = "laser")
     val laserFraction by infiniteTransition.animateFloat(
         initialValue = 0.05f,
@@ -132,10 +173,15 @@ fun BarcodeQrScannerDialog(
     )
 
     fun handleScan(code: String) {
-        if (!hasScanned) {
-            hasScanned = true
-            onCodeScanned(code.trim())
-        }
+        val trimmed = code.trim()
+        if (trimmed.isEmpty() || isScanningPaused) return
+        isScanningPaused = true
+        lastScannedCode = trimmed
+        isSuccessHighlight = true
+        try {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        } catch (_: Exception) {}
+        onCodeScanned(trimmed)
     }
 
     Dialog(
@@ -149,50 +195,118 @@ fun BarcodeQrScannerDialog(
         ) {
             if (hasCameraPermission) {
                 val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
-                val scanner = remember { BarcodeScanning.getClient() }
-                val previewView = remember {
-                    PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER }
+                val barcodeOptions = remember {
+                    BarcodeScannerOptions.Builder()
+                        .setBarcodeFormats(
+                            Barcode.FORMAT_ALL_FORMATS
+                        )
+                        .build()
                 }
+                val scanner = remember(barcodeOptions) { BarcodeScanning.getClient(barcodeOptions) }
+                val previewView = remember {
+                    PreviewView(context).apply {
+                        scaleType = PreviewView.ScaleType.FILL_CENTER
+                    }
+                }
+
                 DisposableEffect(lifecycleOwner) {
                     val providerFuture = ProcessCameraProvider.getInstance(context)
                     var provider: ProcessCameraProvider? = null
+
                     providerFuture.addListener({
                         try {
                             val p = providerFuture.get()
                             provider = p
-                            val preview = Preview.Builder().build().also {
-                                it.setSurfaceProvider(previewView.surfaceProvider)
-                            }
+
+                            // Set high resolution for crisp barcode scanning
+                            val targetResolution = Size(1280, 720)
+
+                            val preview = Preview.Builder()
+                                .setTargetResolution(targetResolution)
+                                .build().also {
+                                    it.setSurfaceProvider(previewView.surfaceProvider)
+                                }
+
                             val analysis = ImageAnalysis.Builder()
+                                .setTargetResolution(targetResolution)
                                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                                 .build()
+
                             analysis.setAnalyzer(analysisExecutor) { proxy ->
                                 val media = proxy.image
-                                if (media == null || hasScanned) {
+                                if (media == null || isScanningPaused) {
                                     proxy.close()
                                 } else {
                                     val img = InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees)
                                     scanner.process(img)
                                         .addOnSuccessListener { codes ->
-                                            val value = codes.firstOrNull { !it.rawValue.isNullOrBlank() }?.rawValue
-                                            if (value != null) {
-                                                previewView.post { handleScan(value) }
+                                            for (barcode in codes) {
+                                                val raw = barcode.rawValue?.trim()?.ifEmpty { null }
+                                                    ?: barcode.displayValue?.trim()?.ifEmpty { null }
+                                                if (!raw.isNullOrBlank()) {
+                                                    previewView.post { handleScan(raw) }
+                                                    break
+                                                }
                                             }
+                                        }
+                                        .addOnFailureListener { e ->
+                                            e.printStackTrace()
                                         }
                                         .addOnCompleteListener { proxy.close() }
                                 }
                             }
+
                             p.unbindAll()
-                            camera = p.bindToLifecycle(
+                            val boundCamera = p.bindToLifecycle(
                                 lifecycleOwner,
                                 CameraSelector.DEFAULT_BACK_CAMERA,
                                 preview,
                                 analysis
                             )
+                            camera = boundCamera
+
+                            // Initial center auto-focus
+                            previewView.post {
+                                if (previewView.width > 0 && previewView.height > 0) {
+                                    val factory = previewView.meteringPointFactory
+                                    val centerPoint = factory.createPoint(
+                                        previewView.width / 2f,
+                                        previewView.height / 2f
+                                    )
+                                    val focusAction = FocusMeteringAction.Builder(centerPoint, FocusMeteringAction.FLAG_AF)
+                                        .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                                        .build()
+                                    boundCamera.cameraControl.startFocusAndMetering(focusAction)
+                                }
+                            }
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
                     }, ContextCompat.getMainExecutor(context))
+
+                    // Setup tap-to-focus on previewView
+                    previewView.setOnTouchListener { v, event ->
+                        if (event.action == MotionEvent.ACTION_UP) {
+                            val cam = camera
+                            if (cam != null) {
+                                val factory = previewView.meteringPointFactory
+                                val point = factory.createPoint(event.x, event.y)
+                                val action = FocusMeteringAction.Builder(
+                                    point,
+                                    FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE
+                                )
+                                    .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                                    .build()
+                                cam.cameraControl.startFocusAndMetering(action)
+                                tapFocusPoint = Offset(event.x, event.y)
+                            }
+                            v.performClick()
+                            true
+                        } else {
+                            true
+                        }
+                    }
+
                     onDispose {
                         camera = null
                         provider?.unbindAll()
@@ -200,16 +314,30 @@ fun BarcodeQrScannerDialog(
                         analysisExecutor.shutdown()
                     }
                 }
+
                 AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
             }
+
+            // Tap Focus Indicator Overlay
+            tapFocusPoint?.let { pos ->
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawCircle(
+                        color = SecondaryTeal,
+                        radius = 36f,
+                        center = pos,
+                        style = Stroke(width = 3f)
+                    )
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(20.dp),
+                    .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top Bar: Title & Close & Flash
+                // Top Bar: Flashlight, Zoom & Close
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -217,19 +345,47 @@ fun BarcodeQrScannerDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
-                        onClick = { isFlashOn = !isFlashOn },
-                        modifier = Modifier
-                            .background(
-                                if (isFlashOn) SecondaryTeal else Color.White.copy(alpha = 0.15f),
-                                CircleShape
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Flashlight Button
+                        IconButton(
+                            onClick = { isFlashOn = !isFlashOn },
+                            modifier = Modifier
+                                .background(
+                                    if (isFlashOn) SecondaryTeal else Color.White.copy(alpha = 0.2f),
+                                    CircleShape
+                                )
+                                .size(42.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FlashOn,
+                                contentDescription = "Flashlight",
+                                tint = if (isFlashOn) Color.Black else Color.White
                             )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FlashOn,
-                            contentDescription = "Flashlight",
-                            tint = if (isFlashOn) Color.Black else Color.White
-                        )
+                        }
+
+                        // Zoom Toggle Button (1x / 2x / 3x)
+                        IconButton(
+                            onClick = {
+                                zoomLevel = when (zoomLevel) {
+                                    1.0f -> 2.0f
+                                    2.0f -> 3.0f
+                                    else -> 1.0f
+                                }
+                            },
+                            modifier = Modifier
+                                .background(
+                                    if (zoomLevel > 1.0f) PrimaryPurple else Color.White.copy(alpha = 0.2f),
+                                    CircleShape
+                                )
+                                .size(42.dp)
+                        ) {
+                            Text(
+                                text = "${zoomLevel.toInt()}x",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
 
                     Text(
@@ -241,7 +397,9 @@ fun BarcodeQrScannerDialog(
 
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.background(Color.White.copy(alpha = 0.15f), CircleShape)
+                        modifier = Modifier
+                            .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                            .size(42.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -256,16 +414,16 @@ fun BarcodeQrScannerDialog(
                     Box(
                         modifier = Modifier
                             .size(260.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.Black.copy(alpha = 0.4f)),
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color.Black.copy(alpha = 0.35f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val w = size.width
                             val h = size.height
-                            val cornerLength = 36f
-                            val strokeW = 6f
-                            val cornerColor = Color(0xFF299DB2)
+                            val cornerLength = 40f
+                            val strokeW = 7f
+                            val cornerColor = if (isSuccessHighlight) StatusSuccess else Color(0xFF299DB2)
 
                             // Top-Left Corner
                             drawLine(cornerColor, Offset(0f, 0f), Offset(cornerLength, 0f), strokeW, StrokeCap.Round)
@@ -283,28 +441,53 @@ fun BarcodeQrScannerDialog(
                             drawLine(cornerColor, Offset(w, h), Offset(w - cornerLength, h), strokeW, StrokeCap.Round)
                             drawLine(cornerColor, Offset(w, h), Offset(w, h - cornerLength), strokeW, StrokeCap.Round)
 
-                            // Laser Line
+                            // Animated Laser Line
                             val laserY = h * laserFraction
                             drawLine(
-                                color = Color(0xFFE91E63),
-                                start = Offset(12f, laserY),
-                                end = Offset(w - 12f, laserY),
-                                strokeWidth = 3f,
+                                color = if (isSuccessHighlight) StatusSuccess else Color(0xFFE91E63),
+                                start = Offset(14f, laserY),
+                                end = Offset(w - 14f, laserY),
+                                strokeWidth = if (isSuccessHighlight) 5f else 3f,
                                 cap = StrokeCap.Round
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
                         text = if (permissionDenied) {
-                            if (isBangla) "ক্যামেরার অনুমতি দিন (Settings থেকে) অথবা কোড লিখুন" else "Camera permission denied. Enable it in Settings or enter the code manually."
-                        } else if (isBangla) "বারকোড বা কিউআর কোড ফ্রেমের মধ্যে রাখুন" else "Align barcode or QR code within the frame",
+                            if (isBangla) "ক্যামেরার অনুমতি দিন (Settings থেকে) অথবা কোড লিখুন"
+                            else "Camera permission denied. Enable it in Settings or enter code manually."
+                        } else if (isSuccessHighlight && lastScannedCode != null) {
+                            if (isBangla) "স্ক্যান সফল: $lastScannedCode" else "Scanned: $lastScannedCode"
+                        } else {
+                            if (isBangla) "বারকোড বা কিউআর কোড ফ্রেমের মধ্যে রাখুন (ফোকাস করতে ট্যাপ করুন)"
+                            else "Align code within frame (Tap to focus)"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontWeight = FontWeight.Medium
+                        color = if (isSuccessHighlight) StatusSuccess else Color.White.copy(alpha = 0.9f),
+                        fontWeight = FontWeight.SemiBold
                     )
+
+                    if (isScanningPaused && lastScannedCode != null) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TextButton(
+                            onClick = {
+                                isScanningPaused = false
+                                isSuccessHighlight = false
+                            }
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = SecondaryTeal, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isBangla) "পুনরায় স্ক্যান করতে ট্যাপ করুন" else "Tap to scan again",
+                                color = SecondaryTeal,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
 
                 // Bottom: Manual Code Entry & Quick Test triggers
@@ -312,7 +495,8 @@ fun BarcodeQrScannerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(18.dp)),
-                    color = Color.White
+                    color = Color.White,
+                    shadowElevation = 4.dp
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),

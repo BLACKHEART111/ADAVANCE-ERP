@@ -25,6 +25,19 @@ object Formatters {
         return sb.toString()
     }
 
+    fun toEnglishDigits(input: String): String {
+        val sb = java.lang.StringBuilder(input.length)
+        for (ch in input) {
+            val idx = BANGLA_DIGITS.indexOf(ch)
+            if (idx >= 0) {
+                sb.append(('0' + idx))
+            } else {
+                sb.append(ch)
+            }
+        }
+        return sb.toString()
+    }
+
     fun formatMoney(money: Money, language: AppLanguage): String {
         return formatMoney(money.minorUnits, money.currency, language)
     }
