@@ -22,6 +22,7 @@ class DocumentNumberService @Inject constructor(
     suspend fun getNextInvoiceNumber(): String = getNextDocumentNumber("INV", "sales_invoices", "invoiceNumber")
     suspend fun getNextPurchaseNumber(): String = getNextDocumentNumber("PUR", "purchase_orders", "poNumber")
     suspend fun getNextCustomerPaymentNumber(): String = getNextDocumentNumber("CP", "customer_payments", "paymentNumber")
+    suspend fun previewNextCustomerPaymentNumber(): String = previewNextDocumentNumber("CP", "customer_payments", "paymentNumber")
     suspend fun getNextSupplierPaymentNumber(): String = getNextDocumentNumber("SP", "supplier_payments", "paymentNumber")
     suspend fun getNextSalesReturnNumber(): String = getNextDocumentNumber("SR", "sales_returns", "returnNumber")
     suspend fun getNextStockTransferNumber(): String = getNextDocumentNumber("ST", "stock_transfers", "transferNumber")
@@ -45,6 +46,18 @@ class DocumentNumberService @Inject constructor(
         }
 
         val nextSeq = counter.incrementAndGet()
+        "$prefix-$currentYear-${nextSeq.toString().padStart(4, '0')}"
+    }
+
+    private suspend fun previewNextDocumentNumber(
+        prefix: String,
+        tableName: String,
+        columnName: String
+    ): String = withContext(Dispatchers.IO) {
+        val currentYear = yearFormat.format(Date())
+        val key = "$prefix-$currentYear"
+        val currentSeq = counters[key]?.get() ?: queryMaxSequenceFromDb(prefix, currentYear, tableName, columnName)
+        val nextSeq = currentSeq + 1
         "$prefix-$currentYear-${nextSeq.toString().padStart(4, '0')}"
     }
 

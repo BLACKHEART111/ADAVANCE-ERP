@@ -696,7 +696,11 @@ class SalesRepositoryImpl @Inject constructor(
         )
 
         recalculateCustomerBalance(draft.customerId)
-        return paymentId
+        return paymentNumber
+    }
+
+    override suspend fun previewNextCustomerPaymentNumber(): String {
+        return documentNumberService.previewNextCustomerPaymentNumber()
     }
 
     override fun getAllPayments(): Flow<List<CustomerPayment>> = customerPaymentDao.getAllPayments()

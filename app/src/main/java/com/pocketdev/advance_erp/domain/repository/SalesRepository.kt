@@ -206,6 +206,7 @@ interface SalesRepository {
     suspend fun searchCustomers(query: String): List<Customer>
 
     // Payments
+    suspend fun previewNextCustomerPaymentNumber(): String
     suspend fun recordCustomerPayment(draft: CustomerPaymentDraft): String
     fun getAllPayments(): Flow<List<CustomerPayment>>
     fun getPaymentsForCustomer(customerId: String): Flow<List<CustomerPayment>>

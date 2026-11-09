@@ -61,6 +61,7 @@ data class SalesUiState(
     val productWiseReport: List<ProductWiseSalesItem> = emptyList(),
     val customerWiseReport: List<CustomerWiseSalesItem> = emptyList(),
     val businessProfile: BusinessProfile? = null,
+    val nextPaymentNumber: String? = null,
     val language: AppLanguage = AppLanguage.BANGLA,
     val isLoading: Boolean = false,
     val userMessage: String? = null
@@ -84,6 +85,7 @@ class SalesViewModel @Inject constructor(
     init {
         loadInitialData()
         loadDefaultReport()
+        refreshNextPaymentNumber()
     }
 
     private fun loadInitialData() {
@@ -259,11 +261,28 @@ class SalesViewModel @Inject constructor(
         }
     }
 
+    fun refreshNextPaymentNumber() {
+        viewModelScope.launch {
+            runCatching {
+                val nextNum = salesRepository.previewNextCustomerPaymentNumber()
+                _uiState.update { it.copy(nextPaymentNumber = nextNum) }
+            }
+        }
+    }
+
     fun recordPayment(draft: CustomerPaymentDraft, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             try {
-                val paymentId = salesRepository.recordCustomerPayment(draft)
-                _uiState.update { it.copy(userMessage = "Payment recorded successfully: $paymentId") }
+                val paymentNumber = salesRepository.recordCustomerPayment(draft)
+                val isBn = _uiState.value.language == AppLanguage.BANGLA
+                val nextNum = runCatching { salesRepository.previewNextCustomerPaymentNumber() }.getOrNull()
+                _uiState.update {
+                    it.copy(
+                        userMessage = if (isBn) "পেমেন্ট রশিদ সফলভাবে সংরক্ষিত হয়েছে: #$paymentNumber"
+                                      else "Payment receipt recorded successfully: #$paymentNumber",
+                        nextPaymentNumber = nextNum
+                    )
+                }
                 if (_uiState.value.selectedInvoice != null) {
                     val updated = salesRepository.getInvoiceById(_uiState.value.selectedInvoice!!.id)
                     if (updated != null) selectInvoice(updated)

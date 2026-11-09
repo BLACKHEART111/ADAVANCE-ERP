@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContactPage
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Payment
@@ -170,7 +171,11 @@ fun SalesScreen(
                 }
             } else if (selectedTabIndex == 2) {
                 FloatingActionButton(
-                    onClick = { collectDueCustomerId = null; showRecordPaymentDialog = true },
+                    onClick = {
+                        collectDueCustomerId = null
+                        viewModel.refreshNextPaymentNumber()
+                        showRecordPaymentDialog = true
+                    },
                     containerColor = PrimaryPurple,
                     contentColor = Color.White
                 ) {
@@ -243,6 +248,7 @@ fun SalesScreen(
                         onCollectDue = { cust ->
                             viewModel.clearSelectedInvoice()
                             collectDueCustomerId = cust.id
+                            viewModel.refreshNextPaymentNumber()
                             showRecordPaymentDialog = true
                         },
                         onViewLedger = { cust ->
@@ -253,6 +259,7 @@ fun SalesScreen(
                     )
                     2 -> PaymentsTab(
                         payments = uiState.payments,
+                        customers = uiState.customers,
                         isBangla = isBangla,
                         onShareReceipt = { pay ->
                             try {
@@ -264,6 +271,11 @@ fun SalesScreen(
                         },
                         onVoidPayment = { paymentId, reason ->
                             viewModel.voidCustomerPayment(paymentId, reason)
+                        },
+                        onRecordPaymentClick = {
+                            collectDueCustomerId = null
+                            viewModel.refreshNextPaymentNumber()
+                            showRecordPaymentDialog = true
                         }
                     )
                     3 -> ReturnsTab(
@@ -372,6 +384,7 @@ fun SalesScreen(
             invoices = uiState.invoices,
             preselectedInvoice = uiState.selectedInvoice,
             preselectedCustomerId = collectDueCustomerId,
+            nextPaymentNumber = uiState.nextPaymentNumber,
             isBangla = isBangla,
             onDismiss = { showRecordPaymentDialog = false; collectDueCustomerId = null },
             onSubmit = { draft ->
@@ -736,35 +749,188 @@ private fun CustomersTab(
 @Composable
 private fun PaymentsTab(
     payments: List<CustomerPayment>,
+    customers: List<Customer>,
     isBangla: Boolean,
     onShareReceipt: (CustomerPayment) -> Unit,
-    onVoidPayment: (paymentId: String, reason: String) -> Unit = { _, _ -> }
+    onVoidPayment: (paymentId: String, reason: String) -> Unit = { _, _ -> },
+    onRecordPaymentClick: () -> Unit = {}
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedMethodFilter by remember { mutableStateOf("ALL") }
     val dateFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US)
     var paymentToVoid by remember { mutableStateOf<CustomerPayment?>(null) }
     var voidReason by remember { mutableStateOf("") }
 
+    val customersMap = remember(customers) { customers.associateBy { it.id } }
+
+    val filteredPayments = remember(payments, searchQuery, selectedMethodFilter, customersMap) {
+        payments.filter { pay ->
+            val cust = customersMap[pay.customerId]
+            val q = searchQuery.trim().lowercase(Locale.ROOT)
+            val matchesSearch = if (q.isBlank()) {
+                true
+            } else {
+                val matchesNumber = pay.paymentNumber.lowercase(Locale.ROOT).contains(q)
+                val matchesCustName = pay.customerName.lowercase(Locale.ROOT).contains(q)
+                val matchesPhone = cust?.phone?.lowercase(Locale.ROOT)?.contains(q) == true
+                val matchesRef = pay.referenceNote?.lowercase(Locale.ROOT)?.contains(q) == true
+                matchesNumber || matchesCustName || matchesPhone || matchesRef
+            }
+
+            val matchesMethod = when (selectedMethodFilter) {
+                "ALL" -> true
+                "VOIDED" -> pay.isVoided
+                "MFS" -> !pay.isVoided && (pay.paymentMethod.equals("BKASH", ignoreCase = true) || pay.paymentMethod.equals("NAGAD", ignoreCase = true))
+                else -> !pay.isVoided && pay.paymentMethod.equals(selectedMethodFilter, ignoreCase = true)
+            }
+
+            matchesSearch && matchesMethod
+        }
+    }
+
+    val totalCollectedMinor = remember(filteredPayments) {
+        filteredPayments.filter { !it.isVoided }.sumOf { it.amountMinor }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(14.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
-        if (payments.isEmpty()) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(if (isBangla) "কোন পেমেন্ট রশিদ পাওয়া যায়নি" else "No Payment Receipts Found", color = TextMuted)
+        // Search Bar for Payments
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = {
+                    Text(
+                        if (isBangla) "রশিদ নং, গ্রাহকের নাম বা ফোন নম্বর দিয়ে খুঁজুন..."
+                        else "Search by Receipt #, Customer name, or Phone..."
+                    )
+                },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextMuted) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextMuted)
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PrimaryPurple,
+                    unfocusedBorderColor = DeepNavy.copy(alpha = 0.2f),
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                ),
+                singleLine = true
+            )
+        }
+
+        // Method Filter Chips
+        item {
+            val filterOptions = listOf(
+                "ALL" to if (isBangla) "সকল (${payments.size})" else "All (${payments.size})",
+                "CASH" to if (isBangla) "ক্যাশ" else "Cash",
+                "BANK" to if (isBangla) "ব্যাংক" else "Bank",
+                "MFS" to "bKash/Nagad",
+                "CHEQUE" to if (isBangla) "চেক" else "Cheque",
+                "VOIDED" to if (isBangla) "বাতিলকৃত" else "Voided"
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(filterOptions) { (key, label) ->
+                    FilterChip(
+                        selected = selectedMethodFilter == key,
+                        onClick = { selectedMethodFilter = key },
+                        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = PrimaryPurple,
+                            selectedLabelColor = Color.White,
+                            containerColor = Color.White,
+                            labelColor = TextPrimary
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = selectedMethodFilter == key,
+                            borderColor = if (selectedMethodFilter == key) PrimaryPurple else DeepNavy.copy(alpha = 0.2f)
+                        )
+                    )
                 }
             }
         }
 
-        items(payments) { pay ->
+        // Summary Bar
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isBangla) "মোট রসিদ: ${filteredPayments.size} টি" else "Total Receipts: ${filteredPayments.size}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "${if (isBangla) "মোট আদায়: " else "Total Collected: "}৳" + Formatters.formatMinorUnit(totalCollectedMinor),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = StatusSuccess,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        if (filteredPayments.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.ReceiptLong,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = if (searchQuery.isNotBlank()) {
+                                if (isBangla) "\"$searchQuery\" এর জন্য কোনো পেমেন্ট রশিদ পাওয়া যায়নি"
+                                else "No payment receipts found matching \"$searchQuery\""
+                            } else {
+                                if (isBangla) "কোন পেমেন্ট রশিদ পাওয়া যায়নি" else "No Payment Receipts Found"
+                            },
+                            color = TextMuted,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        if (searchQuery.isNotBlank() || selectedMethodFilter != "ALL") {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextButton(onClick = { searchQuery = ""; selectedMethodFilter = "ALL" }) {
+                                Text(if (isBangla) "ফিল্টার রিসেট করুন" else "Reset Filters", color = PrimaryPurple)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        items(filteredPayments, key = { it.id }) { pay ->
+            val cust = customersMap[pay.customerId]
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -781,7 +947,33 @@ private fun PaymentsTab(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(pay.paymentNumber, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = PrimaryPurple.copy(alpha = 0.1f)
+                            ) {
+                                Text(
+                                    text = pay.paymentNumber,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryPurple,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                            if (pay.isAdvance) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .background(SecondaryTeal.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = if (isBangla) "অগ্রিম" else "ADVANCE",
+                                        color = SecondaryTeal,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                             if (pay.isVoided) {
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Box(
@@ -798,14 +990,34 @@ private fun PaymentsTab(
                                 }
                             }
                         }
-                        Text(pay.customerName, style = MaterialTheme.typography.bodySmall, color = PrimaryPurple, fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = pay.customerName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (!cust?.phone.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "(${cust!!.phone})",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
                         Text(
                             text = "${pay.paymentMethod} • ${dateFormat.format(Date(pay.paymentDate))}",
                             style = MaterialTheme.typography.labelSmall,
                             color = TextMuted
                         )
                         if (!pay.referenceNote.isNullOrBlank()) {
-                            Text("Ref: ${pay.referenceNote}", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                            Text(
+                                text = "${if (isBangla) "রেফারেন্স: " else "Ref: "}${pay.referenceNote}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary
+                            )
                         }
                         if (pay.isVoided && !pay.voidReason.isNullOrBlank()) {
                             Text(

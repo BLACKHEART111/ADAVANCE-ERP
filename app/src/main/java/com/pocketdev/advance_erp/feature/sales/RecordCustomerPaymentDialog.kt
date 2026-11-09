@@ -1,5 +1,6 @@
 package com.pocketdev.advance_erp.feature.sales
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -17,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -67,7 +71,8 @@ fun RecordCustomerPaymentDialog(
     invoices: List<SalesInvoice>,
     preselectedInvoice: SalesInvoice? = null,
     preselectedCustomerId: String? = null,
-    isBangla: Boolean,
+    nextPaymentNumber: String? = null,
+    isBangla: Boolean = false,
     onDismiss: () -> Unit,
     onSubmit: (CustomerPaymentDraft) -> Unit
 ) {
@@ -119,7 +124,9 @@ fun RecordCustomerPaymentDialog(
                 .fillMaxWidth(0.96f)
                 .fillMaxHeight(0.92f)
                 .widthIn(max = 640.dp)
-                .clip(RoundedCornerShape(16.dp)),
+                .clip(RoundedCornerShape(16.dp))
+                .navigationBarsPadding()
+                .imePadding(),
             color = ERPBackground
         ) {
             Column(
@@ -133,7 +140,7 @@ fun RecordCustomerPaymentDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (isBangla) "গ্রাহকের পেমেন্ট গ্রহণ" else "Record Customer Payment",
                             style = MaterialTheme.typography.titleLarge,
@@ -148,6 +155,50 @@ fun RecordCustomerPaymentDialog(
                     }
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = TextMuted)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Payment Tracking / Receipt Number Banner
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = PrimaryPurple.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.25f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.ReceiptLong,
+                                contentDescription = null,
+                                tint = PrimaryPurple,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isBangla) "পেমেন্ট ট্র্যাকিং / রশিদ নং:" else "Payment Tracking / Receipt #:",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = PrimaryPurple
+                        ) {
+                            Text(
+                                text = nextPaymentNumber ?: "AUTO-GEN",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
                     }
                 }
 
