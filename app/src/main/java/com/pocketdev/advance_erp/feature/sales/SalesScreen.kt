@@ -21,11 +21,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContactPage
 import androidx.compose.material.icons.filled.FilterList
@@ -37,6 +40,7 @@ import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -81,6 +85,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pocketdev.advance_erp.core.designsystem.DeepNavy
 import com.pocketdev.advance_erp.core.designsystem.ERPBackground
+import com.pocketdev.advance_erp.core.designsystem.ERPCalendar
 import com.pocketdev.advance_erp.core.designsystem.ERPCard
 import com.pocketdev.advance_erp.core.designsystem.PrimaryPurple
 import com.pocketdev.advance_erp.core.designsystem.SecondaryTeal
@@ -97,6 +102,7 @@ import com.pocketdev.advance_erp.data.entity.CustomerPayment
 import com.pocketdev.advance_erp.data.entity.SalesInvoice
 import com.pocketdev.advance_erp.data.entity.SalesReturn
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -261,6 +267,7 @@ fun SalesScreen(
                         payments = uiState.payments,
                         customers = uiState.customers,
                         isBangla = isBangla,
+                        language = uiState.language,
                         onShareReceipt = { pay ->
                             try {
                                 val pdf = viewModel.generatePaymentReceiptPdf(context, pay)
@@ -746,24 +753,52 @@ private fun CustomersTab(
     }
 }
 
+enum class PaymentDateFilter {
+    ALL,
+    TODAY,
+    YESTERDAY,
+    THIS_WEEK,
+    THIS_MONTH,
+    CUSTOM_DATE
+}
+
+fun isSameCalendarDay(t1: Long, t2: Long): Boolean {
+    val c1 = Calendar.getInstance().apply { timeInMillis = t1 }
+    val c2 = Calendar.getInstance().apply { timeInMillis = t2 }
+    return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) &&
+           c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
+}
+
 @Composable
 private fun PaymentsTab(
     payments: List<CustomerPayment>,
     customers: List<Customer>,
     isBangla: Boolean,
+    language: AppLanguage = AppLanguage.BANGLA,
     onShareReceipt: (CustomerPayment) -> Unit,
     onVoidPayment: (paymentId: String, reason: String) -> Unit = { _, _ -> },
     onRecordPaymentClick: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedMethodFilter by remember { mutableStateOf("ALL") }
+    var selectedDateFilter by remember { mutableStateOf(PaymentDateFilter.ALL) }
+    var selectedCustomDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    var showCalendarPicker by remember { mutableStateOf(false) }
+
     val dateFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US)
     var paymentToVoid by remember { mutableStateOf<CustomerPayment?>(null) }
     var voidReason by remember { mutableStateOf("") }
 
     val customersMap = remember(customers) { customers.associateBy { it.id } }
 
-    val filteredPayments = remember(payments, searchQuery, selectedMethodFilter, customersMap) {
+    val filteredPayments = remember(
+        payments,
+        searchQuery,
+        selectedMethodFilter,
+        selectedDateFilter,
+        selectedCustomDateMillis,
+        customersMap
+    ) {
         payments.filter { pay ->
             val cust = customersMap[pay.customerId]
             val q = searchQuery.trim().lowercase(Locale.ROOT)
@@ -774,7 +809,22 @@ private fun PaymentsTab(
                 val matchesCustName = pay.customerName.lowercase(Locale.ROOT).contains(q)
                 val matchesPhone = cust?.phone?.lowercase(Locale.ROOT)?.contains(q) == true
                 val matchesRef = pay.referenceNote?.lowercase(Locale.ROOT)?.contains(q) == true
-                matchesNumber || matchesCustName || matchesPhone || matchesRef
+
+                val payDate = Date(pay.paymentDate)
+                val d1 = SimpleDateFormat("dd/MM/yyyy", Locale.US).format(payDate)
+                val d2 = SimpleDateFormat("dd-MM-yyyy", Locale.US).format(payDate)
+                val d3 = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(payDate)
+                val d4 = SimpleDateFormat("dd MMM yyyy", Locale.US).format(payDate).lowercase(Locale.ROOT)
+                val d5 = SimpleDateFormat("dd MMMM yyyy", Locale.US).format(payDate).lowercase(Locale.ROOT)
+                val d6 = SimpleDateFormat("MMM yyyy", Locale.US).format(payDate).lowercase(Locale.ROOT)
+                val dBnDigits1 = Formatters.toBanglaDigits(d1)
+                val dBnDigits2 = Formatters.toBanglaDigits(d2)
+                val dBnDigits3 = Formatters.toBanglaDigits(d3)
+                val matchesDateText = d1.contains(q) || d2.contains(q) || d3.contains(q) ||
+                                      d4.contains(q) || d5.contains(q) || d6.contains(q) ||
+                                      dBnDigits1.contains(q) || dBnDigits2.contains(q) || dBnDigits3.contains(q)
+
+                matchesNumber || matchesCustName || matchesPhone || matchesRef || matchesDateText
             }
 
             val matchesMethod = when (selectedMethodFilter) {
@@ -784,12 +834,94 @@ private fun PaymentsTab(
                 else -> !pay.isVoided && pay.paymentMethod.equals(selectedMethodFilter, ignoreCase = true)
             }
 
-            matchesSearch && matchesMethod
+            val matchesDate = when (selectedDateFilter) {
+                PaymentDateFilter.ALL -> true
+                PaymentDateFilter.TODAY -> isSameCalendarDay(pay.paymentDate, System.currentTimeMillis())
+                PaymentDateFilter.YESTERDAY -> {
+                    val yest = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }.timeInMillis
+                    isSameCalendarDay(pay.paymentDate, yest)
+                }
+                PaymentDateFilter.THIS_WEEK -> {
+                    val weekStart = Calendar.getInstance().apply {
+                        add(Calendar.DAY_OF_YEAR, -6)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+                    val nowEnd = Calendar.getInstance().apply {
+                        set(Calendar.HOUR_OF_DAY, 23)
+                        set(Calendar.MINUTE, 59)
+                        set(Calendar.SECOND, 59)
+                        set(Calendar.MILLISECOND, 999)
+                    }.timeInMillis
+                    pay.paymentDate in weekStart..nowEnd
+                }
+                PaymentDateFilter.THIS_MONTH -> {
+                    val monthStart = Calendar.getInstance().apply {
+                        set(Calendar.DAY_OF_MONTH, 1)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+                    val monthEnd = Calendar.getInstance().apply {
+                        set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
+                        set(Calendar.HOUR_OF_DAY, 23)
+                        set(Calendar.MINUTE, 59)
+                        set(Calendar.SECOND, 59)
+                        set(Calendar.MILLISECOND, 999)
+                    }.timeInMillis
+                    pay.paymentDate in monthStart..monthEnd
+                }
+                PaymentDateFilter.CUSTOM_DATE -> isSameCalendarDay(pay.paymentDate, selectedCustomDateMillis)
+            }
+
+            matchesSearch && matchesMethod && matchesDate
         }
     }
 
     val totalCollectedMinor = remember(filteredPayments) {
         filteredPayments.filter { !it.isVoided }.sumOf { it.amountMinor }
+    }
+
+    val activeDateLabel = remember(selectedDateFilter, selectedCustomDateMillis, isBangla) {
+        val targetMillis = when (selectedDateFilter) {
+            PaymentDateFilter.TODAY -> System.currentTimeMillis()
+            PaymentDateFilter.YESTERDAY -> Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }.timeInMillis
+            PaymentDateFilter.CUSTOM_DATE -> selectedCustomDateMillis
+            else -> selectedCustomDateMillis
+        }
+        val prefix = when (selectedDateFilter) {
+            PaymentDateFilter.TODAY -> if (isBangla) "আজ, " else "Today, "
+            PaymentDateFilter.YESTERDAY -> if (isBangla) "গতকাল, " else "Yesterday, "
+            else -> ""
+        }
+        val formatted = if (isBangla) {
+            val bnDate = SimpleDateFormat("dd MMM yyyy", Locale("bn", "BD")).format(Date(targetMillis))
+            Formatters.toBanglaDigits(bnDate)
+        } else {
+            SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date(targetMillis))
+        }
+        "$prefix$formatted"
+    }
+
+    val activeDateSummaryBadge = remember(selectedDateFilter, selectedCustomDateMillis, isBangla) {
+        when (selectedDateFilter) {
+            PaymentDateFilter.ALL -> ""
+            PaymentDateFilter.TODAY -> if (isBangla) " (আজ)" else " (Today)"
+            PaymentDateFilter.YESTERDAY -> if (isBangla) " (গতকাল)" else " (Yesterday)"
+            PaymentDateFilter.THIS_WEEK -> if (isBangla) " (এই সপ্তাহ)" else " (This Week)"
+            PaymentDateFilter.THIS_MONTH -> if (isBangla) " (এই মাস)" else " (This Month)"
+            PaymentDateFilter.CUSTOM_DATE -> {
+                val formatted = if (isBangla) {
+                    Formatters.toBanglaDigits(SimpleDateFormat("dd MMM", Locale.US).format(Date(selectedCustomDateMillis)))
+                } else {
+                    SimpleDateFormat("dd MMM", Locale.US).format(Date(selectedCustomDateMillis))
+                }
+                " ($formatted)"
+            }
+        }
     }
 
     LazyColumn(
@@ -799,22 +931,31 @@ private fun PaymentsTab(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
-        // Search Bar for Payments
+        // Search Bar for Payments with Date Filter Icon
         item {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 placeholder = {
                     Text(
-                        if (isBangla) "রশিদ নং, গ্রাহকের নাম বা ফোন নম্বর দিয়ে খুঁজুন..."
-                        else "Search by Receipt #, Customer name, or Phone..."
+                        if (isBangla) "রশিদ নং, নাম, ফোন বা তারিখ দিয়ে খুঁজুন..."
+                        else "Search by Receipt #, Customer, Phone, or Date..."
                     )
                 },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextMuted) },
                 trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextMuted)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextMuted)
+                            }
+                        }
+                        IconButton(onClick = { showCalendarPicker = !showCalendarPicker }) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = "Date Filter",
+                                tint = if (selectedDateFilter != PaymentDateFilter.ALL || showCalendarPicker) PrimaryPurple else TextMuted
+                            )
                         }
                     }
                 },
@@ -830,6 +971,225 @@ private fun PaymentsTab(
                 ),
                 singleLine = true
             )
+        }
+
+        // Date Preset Filter Chips
+        item {
+            val dateFilterOptions = listOf(
+                PaymentDateFilter.ALL to (if (isBangla) "সব সময়" else "All Time"),
+                PaymentDateFilter.TODAY to (if (isBangla) "আজ" else "Today"),
+                PaymentDateFilter.YESTERDAY to (if (isBangla) "গতকাল" else "Yesterday"),
+                PaymentDateFilter.THIS_WEEK to (if (isBangla) "এই সপ্তাহ" else "This Week"),
+                PaymentDateFilter.THIS_MONTH to (if (isBangla) "এই মাস" else "This Month"),
+                PaymentDateFilter.CUSTOM_DATE to (
+                    if (selectedDateFilter == PaymentDateFilter.CUSTOM_DATE) {
+                        "📅 " + (if (isBangla) Formatters.toBanglaDigits(SimpleDateFormat("dd MMM", Locale.US).format(Date(selectedCustomDateMillis)))
+                                 else SimpleDateFormat("dd MMM", Locale.US).format(Date(selectedCustomDateMillis)))
+                    } else {
+                        if (isBangla) "📅 নির্দিষ্ট তারিখ" else "📅 Pick Date"
+                    }
+                )
+            )
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(dateFilterOptions) { (filter, label) ->
+                    val isSelected = selectedDateFilter == filter
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            if (filter == PaymentDateFilter.CUSTOM_DATE) {
+                                selectedDateFilter = PaymentDateFilter.CUSTOM_DATE
+                                showCalendarPicker = !showCalendarPicker
+                            } else {
+                                selectedDateFilter = filter
+                                showCalendarPicker = false
+                            }
+                        },
+                        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = PrimaryPurple,
+                            selectedLabelColor = Color.White,
+                            containerColor = Color.White,
+                            labelColor = TextPrimary
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = if (isSelected) PrimaryPurple else DeepNavy.copy(alpha = 0.2f)
+                        )
+                    )
+                }
+            }
+        }
+
+        // Day Navigation Strip for specific date, today, or yesterday
+        if (selectedDateFilter == PaymentDateFilter.CUSTOM_DATE ||
+            selectedDateFilter == PaymentDateFilter.TODAY ||
+            selectedDateFilter == PaymentDateFilter.YESTERDAY) {
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = PrimaryPurple.copy(alpha = 0.08f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = {
+                                    val base = when (selectedDateFilter) {
+                                        PaymentDateFilter.CUSTOM_DATE -> selectedCustomDateMillis
+                                        PaymentDateFilter.YESTERDAY -> Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }.timeInMillis
+                                        else -> System.currentTimeMillis()
+                                    }
+                                    val prev = Calendar.getInstance().apply {
+                                        timeInMillis = base
+                                        add(Calendar.DAY_OF_YEAR, -1)
+                                    }.timeInMillis
+                                    selectedCustomDateMillis = prev
+                                    selectedDateFilter = PaymentDateFilter.CUSTOM_DATE
+                                },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                    contentDescription = "Previous Day",
+                                    tint = PrimaryPurple,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable { showCalendarPicker = !showCalendarPicker }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = null,
+                                    tint = PrimaryPurple,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = activeDateLabel,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryPurple
+                                )
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    val base = when (selectedDateFilter) {
+                                        PaymentDateFilter.CUSTOM_DATE -> selectedCustomDateMillis
+                                        PaymentDateFilter.YESTERDAY -> Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }.timeInMillis
+                                        else -> System.currentTimeMillis()
+                                    }
+                                    val next = Calendar.getInstance().apply {
+                                        timeInMillis = base
+                                        add(Calendar.DAY_OF_YEAR, 1)
+                                    }.timeInMillis
+                                    selectedCustomDateMillis = next
+                                    selectedDateFilter = PaymentDateFilter.CUSTOM_DATE
+                                },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = "Next Day",
+                                    tint = PrimaryPurple,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        TextButton(
+                            onClick = {
+                                selectedDateFilter = PaymentDateFilter.ALL
+                                showCalendarPicker = false
+                            },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (isBangla) "তারিখ মুছুন" else "Clear Date",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = StatusError,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Inline Calendar Card when showCalendarPicker is toggled
+        if (showCalendarPicker) {
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.White,
+                    shadowElevation = 2.dp
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = null,
+                                    tint = PrimaryPurple,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isBangla) "নির্দিষ্ট তারিখ নির্বাচন করুন" else "Select Specific Date",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DeepNavy
+                                )
+                            }
+                            IconButton(
+                                onClick = { showCalendarPicker = false },
+                                modifier = Modifier.size(26.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Close Calendar",
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider(color = DeepNavy.copy(alpha = 0.08f))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ERPCalendar(
+                            language = language,
+                            selectedTimestamp = selectedCustomDateMillis,
+                            onDateSelected = { millis ->
+                                selectedCustomDateMillis = millis
+                                selectedDateFilter = PaymentDateFilter.CUSTOM_DATE
+                                showCalendarPicker = false
+                            }
+                        )
+                    }
+                }
+            }
         }
 
         // Method Filter Chips
@@ -877,7 +1237,8 @@ private fun PaymentsTab(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isBangla) "মোট রসিদ: ${filteredPayments.size} টি" else "Total Receipts: ${filteredPayments.size}",
+                    text = if (isBangla) "মোট রসিদ: ${filteredPayments.size} টি$activeDateSummaryBadge"
+                           else "Total Receipts: ${filteredPayments.size}$activeDateSummaryBadge",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextMuted,
                     fontWeight = FontWeight.SemiBold
@@ -907,21 +1268,30 @@ private fun PaymentsTab(
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(modifier = Modifier.height(10.dp))
+                        val emptyText = if (searchQuery.isNotBlank()) {
+                            if (isBangla) "\"$searchQuery\" এর জন্য কোনো পেমেন্ট রশিদ পাওয়া যায়নি"
+                            else "No payment receipts found matching \"$searchQuery\""
+                        } else if (selectedDateFilter != PaymentDateFilter.ALL) {
+                            if (isBangla) "নির্বাচিত তারিখে কোনো পেমেন্ট রশিদ পাওয়া যায়নি"
+                            else "No payment receipts found for the selected date"
+                        } else {
+                            if (isBangla) "কোন পেমেন্ট রশিদ পাওয়া যায়নি" else "No Payment Receipts Found"
+                        }
                         Text(
-                            text = if (searchQuery.isNotBlank()) {
-                                if (isBangla) "\"$searchQuery\" এর জন্য কোনো পেমেন্ট রশিদ পাওয়া যায়নি"
-                                else "No payment receipts found matching \"$searchQuery\""
-                            } else {
-                                if (isBangla) "কোন পেমেন্ট রশিদ পাওয়া যায়নি" else "No Payment Receipts Found"
-                            },
+                            text = emptyText,
                             color = TextMuted,
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
-                        if (searchQuery.isNotBlank() || selectedMethodFilter != "ALL") {
+                        if (searchQuery.isNotBlank() || selectedMethodFilter != "ALL" || selectedDateFilter != PaymentDateFilter.ALL) {
                             Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(onClick = { searchQuery = ""; selectedMethodFilter = "ALL" }) {
-                                Text(if (isBangla) "ফিল্টার রিসেট করুন" else "Reset Filters", color = PrimaryPurple)
+                            TextButton(onClick = {
+                                searchQuery = ""
+                                selectedMethodFilter = "ALL"
+                                selectedDateFilter = PaymentDateFilter.ALL
+                                showCalendarPicker = false
+                            }) {
+                                Text(if (isBangla) "সকল ফিল্টার রিসেট করুন" else "Reset All Filters", color = PrimaryPurple)
                             }
                         }
                     }
