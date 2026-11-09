@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pocketdev.advance_erp.core.designsystem.ERPActionButton
 import com.pocketdev.advance_erp.core.designsystem.ERPButtonVariant
@@ -100,85 +101,121 @@ fun InventoryValuationView(
                 // Sellable Stock
                 ERPCard(
                     modifier = Modifier.weight(1f),
-                    contentPadding = 10.dp,
+                    contentPadding = 8.dp,
                     backgroundColor = Color(0xFFF0FDF4),
                     border = androidx.compose.foundation.BorderStroke(1.dp, StatusSuccess.copy(alpha = 0.3f))
                 ) {
-                    Text(
-                        text = if (language == AppLanguage.BANGLA) "বিক্রয়যোগ্য মজুদ" else "Sellable Stock",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF166534),
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${breakdown.sellableQuantity} units",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF14532D)
-                    )
-                    Text(
-                        text = Formatters.formatCurrency(breakdown.sellableValuationMinor, currency, language),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF166534)
-                    )
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = if (language == AppLanguage.BANGLA) "বিক্রয়যোগ্য মজুদ" else "Sellable Stock",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF166534),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (language == AppLanguage.BANGLA) {
+                                "${Formatters.formatNumber(breakdown.sellableQuantity.toLong(), language)} টি"
+                            } else {
+                                "${breakdown.sellableQuantity} units"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF14532D),
+                            maxLines = 1
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = Formatters.formatCurrency(breakdown.sellableValuationMinor, currency, language),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF166534),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
                 // Damaged Stock
                 ERPCard(
                     modifier = Modifier.weight(1f),
-                    contentPadding = 10.dp,
+                    contentPadding = 8.dp,
                     backgroundColor = Color(0xFFFEF2F2),
                     border = androidx.compose.foundation.BorderStroke(1.dp, StatusError.copy(alpha = 0.3f))
                 ) {
-                    Text(
-                        text = if (language == AppLanguage.BANGLA) "নষ্ট ও অবলোপন" else "Damaged Stock",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF991B1B),
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${breakdown.damagedQuantity} units",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF7F1D1D)
-                    )
-                    Text(
-                        text = Formatters.formatCurrency(breakdown.damagedValuationMinor, currency, language),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = StatusError
-                    )
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = if (language == AppLanguage.BANGLA) "নষ্ট ও অবলোপন" else "Damaged Stock",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF991B1B),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (language == AppLanguage.BANGLA) {
+                                "${Formatters.formatNumber(breakdown.damagedQuantity.toLong(), language)} টি"
+                            } else {
+                                "${breakdown.damagedQuantity} units"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF7F1D1D),
+                            maxLines = 1
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = Formatters.formatCurrency(breakdown.damagedValuationMinor, currency, language),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = StatusError,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
                 // Total FIFO Valuation
                 ERPCard(
-                    modifier = Modifier.weight(1.2f),
-                    contentPadding = 10.dp,
+                    modifier = Modifier.weight(1.15f),
+                    contentPadding = 8.dp,
                     backgroundColor = Color(0xFFFAF5FF),
                     border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.3f))
                 ) {
-                    Text(
-                        text = if (language == AppLanguage.BANGLA) "মোট মূল্যায়ন (FIFO)" else "Total Valuation",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = PrimaryPurple,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${breakdown.sellableQuantity + breakdown.inTransitQuantity} units",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF581C87)
-                    )
-                    Text(
-                        text = Formatters.formatCurrency(breakdown.totalValuationMinor, currency, language),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryPurple
-                    )
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = if (language == AppLanguage.BANGLA) "মোট মূল্যায়ন (FIFO)" else "Total Valuation",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = PrimaryPurple,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (language == AppLanguage.BANGLA) {
+                                "${Formatters.formatNumber((breakdown.sellableQuantity + breakdown.inTransitQuantity).toLong(), language)} টি"
+                            } else {
+                                "${breakdown.sellableQuantity + breakdown.inTransitQuantity} units"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF581C87),
+                            maxLines = 1
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = Formatters.formatCurrency(breakdown.totalValuationMinor, currency, language),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryPurple,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
