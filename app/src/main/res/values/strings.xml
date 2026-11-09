@@ -1,0 +1,278 @@
+<resources>
+    <string name="app_name">Advance ERP</string>
+    <string name="tagline">Import Business Management</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_inventory">Inventory</string>
+    <string name="nav_sales">Sales</string>
+    <string name="nav_accounts">Accounts</string>
+    <string name="nav_more">More</string>
+    <string name="nav_products">Products</string>
+    <string name="nav_purchases">Purchases</string>
+    <string name="nav_import_management">Import Management</string>
+    <string name="nav_shipments">Shipments</string>
+    <string name="nav_customers">Customers</string>
+    <string name="nav_suppliers">Suppliers</string>
+    <string name="nav_ledger">Ledger</string>
+    <string name="nav_reports">Reports</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Drawer Menu Items & Header -->
+    <string name="drawer_logged_in_at">CURRENT TIME</string>
+    <string name="drawer_clock_time">CURRENT TIME</string>
+    <string name="drawer_sync_logout">SYNC &amp;\nLOG OUT</string>
+    <string name="drawer_default_user">Santanu Ganguly</string>
+    <string name="drawer_select_photo">Select Photo from Gallery</string>
+    <string name="drawer_remove_photo">Reset to Default Photo</string>
+    <string name="drawer_profile_options">Profile &amp; Photo Settings</string>
+    <string name="drawer_edit_user_name">Profile Name</string>
+    <string name="drawer_sync_title">Sync &amp; Log Out</string>
+    <string name="drawer_sync_message">Do you want to sync database backup and log out?</string>
+    <string name="drawer_sync_now">Sync Now</string>
+    <string name="drawer_logout_now">Log Out</string>
+    <string name="drawer_sync_success">Database synchronized successfully</string>
+    <string name="drawer_attendance">Attendance</string>
+    <string name="drawer_timeline">Timeline</string>
+    <string name="drawer_nearby_clients">Nearby Clients</string>
+    <string name="drawer_add_meeting">Add New Meeting</string>
+    <string name="drawer_orders">Orders</string>
+    <string name="drawer_collection">Collection</string>
+    <string name="drawer_performance_status">Performance Status</string>
+    <string name="drawer_map_view">Map View</string>
+    <string name="drawer_share_logs">Share Logs</string>
+    <string name="drawer_reimbursement">Reimbursement</string>
+    <string name="drawer_notifications">Notifications</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_overview">Business Overview</string>
+    <string name="todays_sales">Today\'s Sales</string>
+    <string name="total_receivable">Total Receivable</string>
+    <string name="total_payable">Total Payable</string>
+    <string name="stock_valuation">Stock Valuation</string>
+    <string name="recent_transactions">Recent Transactions</string>
+    <string name="calendar_preview">Activity Calendar</string>
+    <string name="quick_actions">Quick Actions</string>
+    <string name="action_add_product">Add Product</string>
+    <string name="action_stock_adjust">Adjust Stock</string>
+    <string name="action_new_order">New PO</string>
+    <string name="action_new_sale">New Sale</string>
+    <string name="no_recent_transactions">No recent transactions recorded</string>
+    <string name="view_all">View All</string>
+    <string name="placeholder_notice">Initial Setup • Live DB data</string>
+
+    <!-- Product Management -->
+    <string name="product_management">Product Management</string>
+    <string name="all_categories">All Categories</string>
+    <string name="search_products">Search by name, SKU or barcode...</string>
+    <string name="add_new_product">Add Product</string>
+    <string name="add_product">Add Product</string>
+    <string name="product_details">Product Details</string>
+    <string name="product_name_en">Product Name (EN)</string>
+    <string name="product_name_bn">Product Name (BN)</string>
+    <string name="category">Category</string>
+    <string name="sku">SKU</string>
+    <string name="barcode">Barcode</string>
+    <string name="unit">Unit</string>
+    <string name="unit_pcs">Pieces (Pcs)</string>
+    <string name="unit_carton">Carton (Ctn)</string>
+    <string name="unit_kg">Kilogram (Kg)</string>
+    <string name="unit_meter">Meter (M)</string>
+    <string name="purchase_price">Purchase Cost</string>
+    <string name="selling_price">Selling Price</string>
+    <string name="min_stock_alert">Low Stock Alert Threshold</string>
+    <string name="variants">Product Variants</string>
+    <string name="add_variant">Add Variant</string>
+    <string name="color">Color</string>
+    <string name="size">Size</string>
+    <string name="variant_sku">Variant SKU</string>
+    <string name="variant_price">Variant Price</string>
+    <string name="variant_cost">Variant Cost</string>
+    <string name="no_variants">No variants added. Single product SKU will be used.</string>
+    <string name="no_products_found">No products found</string>
+    <string name="no_products_desc">Get started by creating your first imported product.</string>
+    <string name="product_saved_success">Product saved successfully</string>
+    <string name="validation_name_required">Product name is required</string>
+    <string name="validation_sku_required">SKU is required</string>
+    <string name="validation_price_invalid">Please enter valid prices</string>
+
+    <!-- Inventory -->
+    <string name="inventory_management">Inventory &amp; Warehousing</string>
+    <string name="stock_overview">Stock Overview</string>
+    <string name="stock_movements">Movement History</string>
+    <string name="low_stock_warning">Low Stock Items</string>
+    <string name="all_warehouses">All Warehouses</string>
+    <string name="warehouse">Warehouse</string>
+    <string name="in_stock">In Stock</string>
+    <string name="reserved_stock">Reserved</string>
+    <string name="available_stock">Available</string>
+    <string name="stock_adjustment">Stock Adjustment</string>
+    <string name="adjustment_type">Adjustment Type</string>
+    <string name="adjustment_increase">Increase Stock (+)</string>
+    <string name="adjustment_decrease">Decrease Stock (-)</string>
+    <string name="adjustment_quantity">Quantity</string>
+    <string name="adjustment_reason">Reason / Reference</string>
+    <string name="adjustment_saved">Stock adjusted successfully</string>
+    <string name="movement_purchase_receipt">Purchase Receipt</string>
+    <string name="movement_sale_dispatch">Sales Dispatch</string>
+    <string name="movement_adjustment_inc">Stock Add (+)</string>
+    <string name="movement_adjustment_dec">Stock Deduct (-)</string>
+    <string name="movement_import_receipt">Import Shipment Receipt</string>
+    <string name="movement_sale_return">Sales Return</string>
+    <string name="movement_purchase_return">Purchase Return</string>
+    <string name="movement_transfer_out">Transfer Out</string>
+    <string name="movement_transfer_in">Transfer In</string>
+    <string name="movement_damage_writeoff">Damage Write-Off</string>
+    <string name="movement_transfer">Warehouse Transfer</string>
+    <string name="stock_transfers">Stock Transfers</string>
+    <string name="new_transfer">New Transfer</string>
+    <string name="total_inventory_qty">Total Physical Stock</string>
+    <string name="total_sellable_stock">Sellable Stock</string>
+    <string name="total_damaged_stock">Damaged Stock</string>
+    <string name="total_inventory_value">Inventory Valuation (FIFO)</string>
+    <string name="search_inventory_hint">Search product, SKU, barcode...</string>
+    <string name="select_variant">Select Variant</string>
+    <string name="transfer_dispatch">Dispatch</string>
+    <string name="transfer_receive">Receive</string>
+    <string name="transfer_cancel">Cancel</string>
+    <string name="no_stock_data">No inventory items found</string>
+    <string name="no_movements_data">No stock movements recorded yet</string>
+
+    <!-- Import Management -->
+    <string name="import_management">Import Management</string>
+    <string name="import_desc">China sourcing, overseas shipping, customs &amp; landed costs</string>
+    <string name="purchase_orders">Purchase Orders (China)</string>
+    <string name="import_shipments">Import Shipments</string>
+    <string name="carton_tracking">Carton &amp; CBM Tracking</string>
+    <string name="freight_customs">Freight, Duty &amp; Customs</string>
+    <string name="landed_cost">Landed Cost Calculation</string>
+    <string name="warehouse_receiving">Warehouse Receiving</string>
+    <string name="status_pending">Pending</string>
+    <string name="status_in_transit">In Transit</string>
+    <string name="status_customs">Customs Clearance</string>
+    <string name="status_received">Received</string>
+    <string name="status_draft">Draft</string>
+    <string name="future_module_badge">Phase 02 Live</string>
+    <string name="import_feature_notice">Phase 02 China Import Engine active: Room persistence, Landed Cost allocation, Warehouse Receiving and Stock Layers live.</string>
+
+    <!-- Phase 02 Actions & Strings -->
+    <string name="action_create_po">New Purchase Order</string>
+    <string name="action_pay_supplier">Pay Supplier</string>
+    <string name="action_create_shipment">New Shipment</string>
+    <string name="action_add_carton">Add Carton</string>
+    <string name="action_add_cost">Add Cost Record</string>
+    <string name="action_run_allocation">Run Landed Cost Engine</string>
+    <string name="action_post_receiving">Post Warehouse Receipt</string>
+    <string name="action_new_journal">New Journal Entry</string>
+    <string name="action_reverse">Reverse Entry</string>
+    <string name="trial_balance">Trial Balance</string>
+    <string name="chart_of_accounts">Chart of Accounts</string>
+    <string name="cost_layers">Cost Layers</string>
+    <string name="balanced_badge">Balanced: Debit = Credit</string>
+    <string name="unbalanced_badge">Out of Balance!</string>
+    <string name="irreversible_warning">Warning: This action will permanently update stock balances and post immutable accounting entries.</string>
+
+    <!-- Accounts -->
+    <string name="accounts_ledger">Accounts &amp; Finance</string>
+    <string name="accounts_desc">Cash, Bank, Expenses, Customer &amp; Supplier Ledgers</string>
+    <string name="cash_and_bank">Cash &amp; Bank Accounts</string>
+    <string name="expenses">Expense Management</string>
+    <string name="customer_ledger">Customer Ledger</string>
+    <string name="supplier_ledger">Supplier Ledger</string>
+    <string name="journal_entries">Journal Entries</string>
+    <string name="financial_reports">Financial Reports</string>
+    <string name="balance_sheet">Balance Sheet</string>
+    <string name="profit_and_loss">Profit &amp; Loss</string>
+    <string name="accounts_feature_notice">Double-entry accounting engine and journal posting will activate in Phase 02. Entities and balances ready.</string>
+
+    <!-- Contacts -->
+    <string name="contacts">Contacts</string>
+    <string name="customers">Customers</string>
+    <string name="suppliers">Suppliers</string>
+    <string name="add_customer">Add Customer</string>
+    <string name="add_supplier">Add Supplier</string>
+    <string name="outstanding_balance">Outstanding</string>
+    <string name="credit_limit">Credit Limit</string>
+    <string name="contact_name">Name</string>
+    <string name="contact_phone">Phone</string>
+    <string name="contact_email">Email</string>
+    <string name="contact_address">Address</string>
+    <string name="no_contacts">No contacts found</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="language_selection">Language / ভাষা</string>
+    <string name="language_bangla">বাংলা (Bangla)</string>
+    <string name="language_english">English</string>
+    <string name="currency_selection">Base Currency</string>
+    <string name="currency_bdt">BDT (৳ - Bangladeshi Taka)</string>
+    <string name="currency_cny">CNY (¥ - Chinese Yuan)</string>
+    <string name="currency_usd">USD ($ - US Dollar)</string>
+    <string name="business_profile">Business Profile</string>
+    <string name="company_name">Company Name</string>
+    <string name="tax_id">Trade License / BIN</string>
+    <string name="save_changes">Save Changes</string>
+    <string name="settings_saved">Settings updated successfully</string>
+    <string name="app_info">System Information</string>
+    <string name="db_status">Database Status</string>
+    <string name="db_status_active">Room DB v1 Active • Foreign Keys ON</string>
+
+    <!-- Common UI -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="close">Close</string>
+    <string name="confirm">Confirm</string>
+    <string name="search">Search</string>
+    <string name="filter">Filter</string>
+    <string name="clear">Clear</string>
+    <string name="loading">Loading...</string>
+    <string name="success">Success</string>
+    <string name="error">Error</string>
+    <string name="coming_soon">Coming Soon</string>
+    <string name="menu_drawer_open">Open navigation menu</string>
+    <string name="menu_drawer_close">Close navigation menu</string>
+    <string name="refresh">Refresh</string>
+    <string name="items_count">%1$d items</string>
+
+    <!-- Phase 03 Sales & Customer Strings -->
+    <string name="sales_invoices_title">Sales Invoices</string>
+    <string name="sales_invoices_subtitle">Wholesale merchandise orders and billing</string>
+    <string name="customer_ledger_title">Customer Ledger &amp; Receivables</string>
+    <string name="payment_management_title">Payments &amp; Collections</string>
+    <string name="sales_returns_title">Sales Returns &amp; Stock Restorations</string>
+    <string name="sales_reports_title">Sales &amp; Profit Performance</string>
+    <string name="action_create_invoice">Create Sales Invoice</string>
+    <string name="action_post_invoice">Post Invoice (Stock &amp; Accounting)</string>
+    <string name="action_record_payment">Record Customer Payment</string>
+    <string name="action_process_return">Process Sales Return</string>
+    <string name="action_share_pdf">Print / Share Invoice PDF</string>
+
+    <!-- Inventory Compact Redesign -->
+    <string name="sort_name_asc">Name (A to Z)</string>
+    <string name="sort_name_desc">Name (Z to A)</string>
+    <string name="sort_sku_asc">SKU (A to Z)</string>
+    <string name="sort_qty_desc">Stock: High to Low</string>
+    <string name="sort_qty_asc">Stock: Low to High</string>
+    <string name="filter_and_sort">Filter &amp; Sort</string>
+    <string name="filter_status_all">All Stock Status</string>
+    <string name="filter_status_in_stock">In Stock Only</string>
+    <string name="filter_status_low_stock">Low Stock Warning</string>
+    <string name="filter_status_out_of_stock">Out of Stock</string>
+    <string name="variants_count_format">%1$d variants</string>
+    <string name="reset_filters">Reset All</string>
+    <string name="apply_filters">Apply</string>
+    <string name="stock_physical_short">Physical</string>
+    <string name="stock_sellable_short">Sellable</string>
+    <string name="stock_damaged_short">Damaged</string>
+    <string name="stock_valuation_short">Valuation</string>
+    <string name="stock_status">Stock Status</string>
+    <string name="sort_by">Sort By</string>
+    <string name="warehouse_select">Warehouse</string>
+    <string name="action_stock_adjustment">Stock Adjustment</string>
+    <string name="action_stock_transfer">Stock Transfer</string>
+    <string name="action_barcode_scanner">Barcode / QR Scanner</string>
+    <string name="action_reconciliation">Audit Reconciliation</string>
+    <string name="action_export_ledger">Export Movement PDF</string>
+</resources>

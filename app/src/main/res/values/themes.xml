@@ -1,0 +1,19 @@
+<resources>
+    <!-- ADVANCE ERP Official Brand Theme -->
+    <style name="Theme.PocketDevApp" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorPrimary">#792B87</item>
+        <item name="android:colorPrimaryDark">#5B1F67</item>
+        <item name="android:colorAccent">#299DB2</item>
+        <item name="android:statusBarColor">#263849</item>
+        <item name="android:navigationBarColor">#263849</item>
+        <item name="android:windowBackground">#F2F5F7</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- Splash Screen Theme with Official Advance ERP Branding -->
+    <style name="Theme.AdvanceErp.Splash" parent="Theme.PocketDevApp">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
+</resources>

@@ -1,0 +1,278 @@
+<resources>
+    <string name="app_name">অ্যাডভান্স ইআরপি</string>
+    <string name="tagline">আমদানি বাণিজ্য ব্যবস্থাপনা</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">ড্যাশবোর্ড</string>
+    <string name="nav_inventory">ইনভেন্টরি</string>
+    <string name="nav_sales">বিক্রয়</string>
+    <string name="nav_accounts">হিসাব</string>
+    <string name="nav_more">আরও</string>
+    <string name="nav_products">পণ্যসমূহ</string>
+    <string name="nav_purchases">ক্রয়</string>
+    <string name="nav_import_management">আমদানি ব্যবস্থাপনা</string>
+    <string name="nav_shipments">চালানসমূহ</string>
+    <string name="nav_customers">গ্রাহকবৃন্দ</string>
+    <string name="nav_suppliers">সরবরাহকারী</string>
+    <string name="nav_ledger">খতিয়ান</string>
+    <string name="nav_reports">প্রতিবেদন</string>
+    <string name="nav_settings">সেটিংস</string>
+
+    <!-- Drawer Menu Items & Header -->
+    <string name="drawer_logged_in_at">বর্তমান সময়</string>
+    <string name="drawer_clock_time">বর্তমান সময়</string>
+    <string name="drawer_sync_logout">সিঙ্ক ও\nলগআউট</string>
+    <string name="drawer_default_user">Santanu Ganguly</string>
+    <string name="drawer_select_photo">গ্যালারি থেকে ছবি নির্বাচন</string>
+    <string name="drawer_remove_photo">ডিফল্ট ছবি ব্যবহার করুন</string>
+    <string name="drawer_profile_options">প্রোফাইল ও ছবি সেটিংস</string>
+    <string name="drawer_edit_user_name">প্রোফাইলের নাম</string>
+    <string name="drawer_sync_title">সিঙ্ক ও লগআউট</string>
+    <string name="drawer_sync_message">আপনি কি ডাটাবেজ ব্যাকআপ সিঙ্ক করে লগআউট করতে চান?</string>
+    <string name="drawer_sync_now">এখনই সিঙ্ক করুন</string>
+    <string name="drawer_logout_now">লগআউট</string>
+    <string name="drawer_sync_success">ডাটাবেজ সফলভাবে সিঙ্ক হয়েছে</string>
+    <string name="drawer_attendance">উপস্থিতি (Attendance)</string>
+    <string name="drawer_timeline">টাইমলাইন (Timeline)</string>
+    <string name="drawer_nearby_clients">নিকটস্থ ক্লায়েন্ট (Nearby Clients)</string>
+    <string name="drawer_add_meeting">নতুন মিটিং (Add Meeting)</string>
+    <string name="drawer_orders">অর্ডারসমূহ (Orders)</string>
+    <string name="drawer_collection">কালেকশন (Collection)</string>
+    <string name="drawer_performance_status">পারফরম্যান্স স্ট্যাটাস (Status)</string>
+    <string name="drawer_map_view">ম্যাপ ভিউ (Map View)</string>
+    <string name="drawer_share_logs">লগ শেয়ার (Share Logs)</string>
+    <string name="drawer_reimbursement">রিইমবার্সমেন্ট (Reimbursement)</string>
+    <string name="drawer_notifications">নোটিফিকেশন (Notifications)</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_overview">ব্যবসায়িক পর্যালোচনা</string>
+    <string name="todays_sales">আজকের বিক্রয়</string>
+    <string name="total_receivable">মোট পাওনা (বাকি)</string>
+    <string name="total_payable">মোট দেনা</string>
+    <string name="stock_valuation">মজুদ পণ্যের মূল্য</string>
+    <string name="recent_transactions">সাম্প্রতিক লেনদেন</string>
+    <string name="calendar_preview">কার্যক্রম ক্যালেন্ডার</string>
+    <string name="quick_actions">দ্রুত কার্যক্রম</string>
+    <string name="action_add_product">পণ্য যোগ</string>
+    <string name="action_stock_adjust">স্টক সমন্বয়</string>
+    <string name="action_new_order">নতুন ক্রয়াদেশ</string>
+    <string name="action_new_sale">নতুন বিক্রয়</string>
+    <string name="no_recent_transactions">কোনো সাম্প্রতিক লেনদেন নেই</string>
+    <string name="view_all">সব দেখুন</string>
+    <string name="placeholder_notice">প্রাথমিক সেটআপ • লাইভ ডাটাবেজ তথ্য</string>
+
+    <!-- Product Management -->
+    <string name="product_management">পণ্য ব্যবস্থাপনা</string>
+    <string name="all_categories">সকল ক্যাটাগরি</string>
+    <string name="search_products">নাম, এসকেইউ বা বারকোড দিয়ে খুঁজুন...</string>
+    <string name="add_new_product">নতুন পণ্য যোগ করুন</string>
+    <string name="add_product">পণ্য যোগ করুন</string>
+    <string name="product_details">পণ্যের বিস্তারিত</string>
+    <string name="product_name_en">পণ্যের নাম (ইংরেজি)</string>
+    <string name="product_name_bn">পণ্যের নাম (বাংলা)</string>
+    <string name="category">ক্যাটাগরি</string>
+    <string name="sku">এসকেইউ (SKU)</string>
+    <string name="barcode">বারকোড</string>
+    <string name="unit">একক</string>
+    <string name="unit_pcs">পিস (Pcs)</string>
+    <string name="unit_carton">কার্টন (Ctn)</string>
+    <string name="unit_kg">কেজি (Kg)</string>
+    <string name="unit_meter">মিটার (M)</string>
+    <string name="purchase_price">ক্রয় খরচ</string>
+    <string name="selling_price">বিক্রয় মূল্য</string>
+    <string name="min_stock_alert">স্বল্প স্টক সতর্কতা সীমা</string>
+    <string name="variants">পণ্যের ভ্যারিয়েন্ট</string>
+    <string name="add_variant">ভ্যারিয়েন্ট যোগ করুন</string>
+    <string name="color">রং</string>
+    <string name="size">সাইজ</string>
+    <string name="variant_sku">ভ্যারিয়েন্ট এসকেইউ</string>
+    <string name="variant_price">ভ্যারিয়েন্ট বিক্রয় মূল্য</string>
+    <string name="variant_cost">ভ্যারিয়েন্ট ক্রয় মূল্য</string>
+    <string name="no_variants">কোনো ভ্যারিয়েন্ট যোগ করা হয়নি। মূল পণ্যের এসকেইউ ব্যবহৃত হবে।</string>
+    <string name="no_products_found">কোনো পণ্য পাওয়া যায়নি</string>
+    <string name="no_products_desc">আপনার প্রথম আমদানিকৃত পণ্য যোগ করে শুরু করুন।</string>
+    <string name="product_saved_success">পণ্য সফলভাবে সংরক্ষিত হয়েছে</string>
+    <string name="validation_name_required">পণ্যের নাম আবশ্যক</string>
+    <string name="validation_sku_required">এসকেইউ আবশ্যক</string>
+    <string name="validation_price_invalid">অনুগ্রহ করে সঠিক মূল্য লিখুন</string>
+
+    <!-- Inventory -->
+    <string name="inventory_management">ইনভেন্টরি ও ওয়্যারহাউস</string>
+    <string name="stock_overview">মজুদ পরিস্থিতি</string>
+    <string name="stock_movements">স্টক চলাচলের ইতিহাস</string>
+    <string name="low_stock_warning">স্বল্প মজুদের পণ্য</string>
+    <string name="all_warehouses">সকল ওয়্যারহাউস</string>
+    <string name="warehouse">ওয়্যারহাউস</string>
+    <string name="in_stock">বর্তমান স্টক</string>
+    <string name="reserved_stock">সংরক্ষিত স্টক</string>
+    <string name="available_stock">বিক্রয়যোগ্য স্টক</string>
+    <string name="stock_adjustment">স্টক সমন্বয়</string>
+    <string name="adjustment_type">সমন্বয়ের ধরন</string>
+    <string name="adjustment_increase">স্টক বৃদ্ধি (+)</string>
+    <string name="adjustment_decrease">স্টক হ্রাস (-)</string>
+    <string name="adjustment_quantity">পরিমাণ</string>
+    <string name="adjustment_reason">কারণ / রেফারেন্স</string>
+    <string name="adjustment_saved">স্টক সমন্বয় সফল হয়েছে</string>
+    <string name="movement_purchase_receipt">ক্রয় গ্রহণ</string>
+    <string name="movement_sale_dispatch">বিক্রয় সরবরাহ</string>
+    <string name="movement_adjustment_inc">স্টক যোগ (+)</string>
+    <string name="movement_adjustment_dec">স্টক বিয়োগ (-)</string>
+    <string name="movement_import_receipt">আমদানি চালান গ্রহণ</string>
+    <string name="movement_sale_return">বিক্রয় ফেরত গ্রহণ</string>
+    <string name="movement_purchase_return">ক্রয় ফেরত প্রদান</string>
+    <string name="movement_transfer_out">স্থানান্তর প্রেরণ</string>
+    <string name="movement_transfer_in">স্থানান্তর গ্রহণ</string>
+    <string name="movement_damage_writeoff">নষ্ট পণ্য অবলোপন</string>
+    <string name="movement_transfer">ওয়্যারহাউস স্থানান্তর</string>
+    <string name="stock_transfers">ওয়্যারহাউস স্থানান্তর</string>
+    <string name="new_transfer">নতুন স্থানান্তর</string>
+    <string name="total_inventory_qty">মোট ফিজিক্যাল স্টক</string>
+    <string name="total_sellable_stock">বিক্রয়যোগ্য স্টক</string>
+    <string name="total_damaged_stock">নষ্ট স্টক</string>
+    <string name="total_inventory_value">ইনভেন্টরি মূল্যায়ন (FIFO)</string>
+    <string name="search_inventory_hint">পণ্য, এসকেইউ বা বারকোড দিয়ে খুঁজুন...</string>
+    <string name="select_variant">ভেরিয়েন্ট নির্বাচন করুন</string>
+    <string name="transfer_dispatch">পাঠানো</string>
+    <string name="transfer_receive">গ্রহণ করা</string>
+    <string name="transfer_cancel">বাতিল করা</string>
+    <string name="no_stock_data">কোনো ইনভেন্টরি তথ্য পাওয়া যায়নি</string>
+    <string name="no_movements_data">এখনও কোনো স্টক চলাচলের রেকর্ড নেই</string>
+
+    <!-- Import Management -->
+    <string name="import_management">আমদানি ব্যবস্থাপনা</string>
+    <string name="import_desc">চীন সোর্সিং, আন্তর্জাতিক শিপিং, শুল্ক ও ল্যান্ডেড কস্ট</string>
+    <string name="purchase_orders">ক্রয়াদেশ (চীন)</string>
+    <string name="import_shipments">আমদানি চালানসমূহ</string>
+    <string name="carton_tracking">কার্টন ও সিবিএম ট্র্যাকিং</string>
+    <string name="freight_customs">ফ্রেইট, শুল্ক ও কাস্টমস</string>
+    <string name="landed_cost">ল্যান্ডেড কস্ট হিসাব</string>
+    <string name="warehouse_receiving">ওয়্যারহাউসে পণ্য গ্রহণ</string>
+    <string name="status_pending">অপেক্ষমান</string>
+    <string name="status_in_transit">পথিমধ্যে রয়েছে</string>
+    <string name="status_customs">কাস্টমস ছাড়পত্র প্রক্রিয়া</string>
+    <string name="status_received">গৃহীত হয়েছে</string>
+    <string name="status_draft">খসড়া</string>
+    <string name="future_module_badge">ফেজ ০২ সক্রিয়</string>
+    <string name="import_feature_notice">ফেজ ০২ চীন আমদানি ইঞ্জিন সক্রিয়: ডাটাবেজ পারসিসট্যান্স, ল্যান্ডেড কস্ট বণ্টন, ওয়্যারহাউস রিসিভিং এবং স্টক লেয়ার্স চালু রয়েছে।</string>
+
+    <!-- Phase 02 Actions & Strings -->
+    <string name="action_create_po">নতুন ক্রয়াদেশ (PO)</string>
+    <string name="action_pay_supplier">পেমেন্ট প্রদান</string>
+    <string name="action_create_shipment">নতুন চালান</string>
+    <string name="action_add_carton">কার্টন যোগ করুন</string>
+    <string name="action_add_cost">ব্যয় যোগ করুন</string>
+    <string name="action_run_allocation">ল্যান্ডেড কস্ট হিসাব করুন</string>
+    <string name="action_post_receiving">মজুদ পোস্টিং করুন</string>
+    <string name="action_new_journal">নতুন জাবেদা দাখিলা</string>
+    <string name="action_reverse">বিপরীত দাখিলা</string>
+    <string name="trial_balance">রেওয়ামিল (ট্রায়াল ব্যালেন্স)</string>
+    <string name="chart_of_accounts">হিসাব তালিকা (COA)</string>
+    <string name="cost_layers">কস্ট লেয়ার্স</string>
+    <string name="balanced_badge">সমতা নিশ্চিত: ডেবিট = ক্রেডিট</string>
+    <string name="unbalanced_badge">অসামঞ্জস্যপূর্ণ!</string>
+    <string name="irreversible_warning">সতর্কতা: এই কার্যক্রমটি স্থায়ীভাবে মজুদ বৃদ্ধি করবে এবং অপরিবর্তনীয় হিসাব দাখিলা করবে।</string>
+
+    <!-- Accounts -->
+    <string name="accounts_ledger">হিসাব ও অর্থায়ন</string>
+    <string name="accounts_desc">নগদ, ব্যাংক, ব্যয়, গ্রাহক ও সরবরাহকারী খতিয়ান</string>
+    <string name="cash_and_bank">নগদ ও ব্যাংক অ্যাকাউন্ট</string>
+    <string name="expenses">ব্যয় ব্যবস্থাপনা</string>
+    <string name="customer_ledger">গ্রাহক খতিয়ান</string>
+    <string name="supplier_ledger">সরবরাহকারী খতিয়ান</string>
+    <string name="journal_entries">জাবেদা দাখিলা</string>
+    <string name="financial_reports">আর্থিক প্রতিবেদন</string>
+    <string name="balance_sheet">উদ্বৃত্তপত্র (ব্যালেন্স শিট)</string>
+    <string name="profit_and_loss">লাভ-ক্ষতি বিবরণী</string>
+    <string name="accounts_feature_notice">দ্বৈত দাখিলা হিসাব পদ্ধতি ও জাবেদা পোস্টিং ফেজ ০২ এ চালু হবে। ব্যালেন্স ট্র্যাকিং সক্রিয় রয়েছে।</string>
+
+    <!-- Contacts -->
+    <string name="contacts">যোগাযোগ ও খদ্দের</string>
+    <string name="customers">গ্রাহকবৃন্দ</string>
+    <string name="suppliers">সরবরাহকারীগণ</string>
+    <string name="add_customer">নতুন গ্রাহক যোগ</string>
+    <string name="add_supplier">নতুন সরবরাহকারী যোগ</string>
+    <string name="outstanding_balance">বকেয়া ব্যালেন্স</string>
+    <string name="credit_limit">বাকির সীমা</string>
+    <string name="contact_name">নাম</string>
+    <string name="contact_phone">ফোন</string>
+    <string name="contact_email">ইমেইল</string>
+    <string name="contact_address">ঠিকানা</string>
+    <string name="no_contacts">কোনো যোগাযোগ পাওয়া যায়নি</string>
+
+    <!-- Settings -->
+    <string name="settings">সেটিংস</string>
+    <string name="language_selection">ভাষা / Language</string>
+    <string name="language_bangla">বাংলা (Bangla)</string>
+    <string name="language_english">English (ইংরেজি)</string>
+    <string name="currency_selection">মূল মুদ্রা (কারেন্সি)</string>
+    <string name="currency_bdt">বিডিটি (৳ - বাংলাদেশি টাকা)</string>
+    <string name="currency_cny">সিএনওয়াই (¥ - চাইনিজ ইউয়ান)</string>
+    <string name="currency_usd">ইউএসডি ($ - ইউএস ডলার)</string>
+    <string name="business_profile">ব্যবসায়িক প্রোফাইল</string>
+    <string name="company_name">প্রতিষ্ঠানের নাম</string>
+    <string name="tax_id">ট্রেড লাইসেন্স / বিআইএন</string>
+    <string name="save_changes">সংরক্ষণ করুন</string>
+    <string name="settings_saved">সেটিংস সফলভাবে হালনাগাদ করা হয়েছে</string>
+    <string name="app_info">সিস্টেম তথ্য</string>
+    <string name="db_status">ডাটাবেজ অবস্থা</string>
+    <string name="db_status_active">রুম ডিবি v1 সক্রিয় • ফরেন কি চালু</string>
+
+    <!-- Common UI -->
+    <string name="save">সংরক্ষণ</string>
+    <string name="cancel">বাতিল</string>
+    <string name="delete">মুছুন</string>
+    <string name="edit">সম্পাদনা</string>
+    <string name="close">বন্ধ করুন</string>
+    <string name="confirm">নিশ্চিত করুন</string>
+    <string name="search">অনুসন্ধান</string>
+    <string name="filter">ফিল্টার</string>
+    <string name="clear">মুছুন</string>
+    <string name="loading">লোড হচ্ছে...</string>
+    <string name="success">সফল</string>
+    <string name="error">ত্রুটি</string>
+    <string name="coming_soon">শীঘ্রই আসছে</string>
+    <string name="menu_drawer_open">মেনু খুলুন</string>
+    <string name="menu_drawer_close">মেনু বন্ধ করুন</string>
+    <string name="refresh">রিফ্রেশ</string>
+    <string name="items_count">%1$d টি আইটেম</string>
+
+    <!-- Phase 03 Sales & Customer Strings -->
+    <string name="sales_invoices_title">বিক্রয় চালান</string>
+    <string name="sales_invoices_subtitle">পাইকারি পণ্য অর্ডার ও বিলিং</string>
+    <string name="customer_ledger_title">গ্রাহক লেজার ও দেনাদার হিসাব</string>
+    <string name="payment_management_title">পেমেন্ট ও কালেকশন</string>
+    <string name="sales_returns_title">বিক্রয় ফেরত ও স্টক পুনরুদ্ধার</string>
+    <string name="sales_reports_title">বিক্রয় ও মোট লাভ বিশ্লেষণ</string>
+    <string name="action_create_invoice">নতুন চালান তৈরি করুন</string>
+    <string name="action_post_invoice">চালান পোস্ট করুন (স্টক ও হিসাব)</string>
+    <string name="action_record_payment">গ্রাহকের পেমেন্ট গ্রহণ</string>
+    <string name="action_process_return">বিক্রয় ফেরত প্রক্রিয়া</string>
+    <string name="action_share_pdf">চালান PDF শেয়ার / প্রিন্ট</string>
+
+    <!-- Inventory Compact Redesign -->
+    <string name="sort_name_asc">নাম (A to Z)</string>
+    <string name="sort_name_desc">নাম (Z to A)</string>
+    <string name="sort_sku_asc">এসকেইউ (A to Z)</string>
+    <string name="sort_qty_desc">মজুদ: বেশি থেকে কম</string>
+    <string name="sort_qty_asc">মজুদ: কম থেকে বেশি</string>
+    <string name="filter_and_sort">ফিল্টার ও বিন্যাস</string>
+    <string name="filter_status_all">সব ধরনের মজুদ</string>
+    <string name="filter_status_in_stock">শুধু মজুদ আছে</string>
+    <string name="filter_status_low_stock">স্বল্প মজুদ সতর্কতা</string>
+    <string name="filter_status_out_of_stock">মজুদ শেষ (০)</string>
+    <string name="variants_count_format">%1$d ভেরিয়েন্ট</string>
+    <string name="reset_filters">রিসেট করুন</string>
+    <string name="apply_filters">প্রয়োগ করুন</string>
+    <string name="stock_physical_short">ফিজিক্যাল</string>
+    <string name="stock_sellable_short">বিক্রয়যোগ্য</string>
+    <string name="stock_damaged_short">নষ্ট</string>
+    <string name="stock_valuation_short">মূল্যায়ন</string>
+    <string name="stock_status">মজুদ অবস্থা</string>
+    <string name="sort_by">সাজানোর ক্রম</string>
+    <string name="warehouse_select">ওয়্যারহাউস</string>
+    <string name="action_stock_adjustment">স্টক সমন্বয়</string>
+    <string name="action_stock_transfer">স্টক স্থানান্তর</string>
+    <string name="action_barcode_scanner">বারকোড / কিউআর স্ক্যানার</string>
+    <string name="action_reconciliation">ইনভেন্টরি অডিট পুনর্মিলন</string>
+    <string name="action_export_ledger">মুভমেন্ট লেজার PDF</string>
+</resources>

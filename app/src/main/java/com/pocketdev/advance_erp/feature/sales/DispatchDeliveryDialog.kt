@@ -1,0 +1,206 @@
+package com.pocketdev.advance_erp.feature.sales
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.pocketdev.advance_erp.data.entity.SalesInvoice
+import com.pocketdev.advance_erp.domain.repository.DeliveryDispatchDraft
+import com.pocketdev.advance_erp.domain.repository.DeliveryDispatchItemDraft
+import com.pocketdev.advance_erp.domain.repository.UndeliveredItemInfo
+
+@Composable
+fun DispatchDeliveryDialog(
+    invoice: SalesInvoice,
+    remainingItems: List<UndeliveredItemInfo>,
+    onDismiss: () -> Unit,
+    onDispatch: (DeliveryDispatchDraft) -> Unit
+) {
+    var deliveryPerson by remember { mutableStateOf("") }
+    var transportInfo by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+
+    // Map itemId to dispatch quantity string
+    val dispatchQtyMap = remember(remainingItems) {
+        mutableStateMapOf<String, String>().apply {
+            remainingItems.forEach { item ->
+                put(item.invoiceItemId, item.remainingQuantity.toString())
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.LocalShipping, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                "Dispatch Delivery Challan / ডেলিভারি চালান",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Invoice: ${invoice.invoiceNumber} • Customer: ${invoice.customerName}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+
+                Divider(modifier = Modifier.padding(vertical = 12.dp))
+
+                // Metadata inputs
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = deliveryPerson,
+                        onValueChange = { deliveryPerson = it },
+                        label = { Text("Delivery Person / ডেলিভারিম্যান") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = transportInfo,
+                        onValueChange = { transportInfo = it },
+                        label = { Text("Transport / গাড়ি নম্বর") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text("Items to Dispatch / সরবরাহের পণ্য তালিকা:", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleSmall)
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Items list
+                LazyColumn(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(remainingItems) { item ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1.5f)) {
+                                    Text(item.productNameEn, fontWeight = FontWeight.Bold)
+                                    Text("SKU: ${item.sku}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("Ordered: ${item.orderedQuantity} | Remaining: ${item.remainingQuantity}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Dispatch Qty:", style = MaterialTheme.typography.bodySmall)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    OutlinedTextField(
+                                        value = dispatchQtyMap[item.invoiceItemId] ?: "",
+                                        onValueChange = { input ->
+                                            val qty = input.filter { it.isDigit() }
+                                            val intVal = qty.toIntOrNull() ?: 0
+                                            if (intVal <= item.remainingQuantity) {
+                                                dispatchQtyMap[item.invoiceItemId] = qty
+                                            }
+                                        },
+                                        modifier = Modifier.width(80.dp),
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text("Delivery Notes / বিশেষ নির্দেশনা") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Actions
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Button(
+                        onClick = {
+                            val itemDrafts = remainingItems.mapNotNull { item ->
+                                val qty = dispatchQtyMap[item.invoiceItemId]?.toIntOrNull() ?: 0
+                                if (qty > 0) {
+                                    DeliveryDispatchItemDraft(
+                                        invoiceItemId = item.invoiceItemId,
+                                        productId = item.productId,
+                                        variantId = item.variantId,
+                                        quantityToDispatch = qty
+                                    )
+                                } else null
+                            }
+
+                            if (itemDrafts.isNotEmpty()) {
+                                onDispatch(
+                                    DeliveryDispatchDraft(
+                                        invoiceId = invoice.id,
+                                        warehouseId = invoice.warehouseId,
+                                        deliveryPerson = deliveryPerson.ifBlank { null },
+                                        transportInfo = transportInfo.ifBlank { null },
+                                        notes = notes.ifBlank { null },
+                                        items = itemDrafts
+                                    )
+                                )
+                            }
+                        }
+                    ) {
+                        Text("Confirm Dispatch / চালান নিশ্চিত করুন")
+                    }
+                }
+            }
+        }
+    }
+}
