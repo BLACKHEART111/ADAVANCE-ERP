@@ -9,12 +9,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -57,6 +60,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -134,18 +138,23 @@ fun ProductDetailDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.94f)
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.92f)
+                .widthIn(max = 640.dp)
                 .clip(RoundedCornerShape(20.dp)),
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 8.dp
         ) {
             Column(
                 modifier = Modifier
-                    .padding(18.dp)
-                    .verticalScroll(rememberScrollState())
+                    .fillMaxSize()
+                    .navigationBarsPadding()
             ) {
                 // Header: Title & Close & Edit
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -192,7 +201,16 @@ fun ProductDetailDialog(
                     }
                 }
 
-                Divider(color = ERPDivider, modifier = Modifier.padding(vertical = 10.dp))
+                Divider(color = ERPDivider)
+
+                // Scrollable Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 18.dp, vertical = 12.dp)
+                ) {
 
                 // Hero Image & Photo Gallery
                 if (selectedHeroUri != null) {
@@ -531,35 +549,42 @@ fun ProductDetailDialog(
 
                                 Spacer(modifier = Modifier.width(10.dp))
 
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 6.dp)) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Text(
                                             text = v.sku,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold,
-                                            color = TextPrimary
+                                            color = TextPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f, fill = false)
                                         )
                                         if (variantStockMap[v.id] != null) {
+                                            val stock = variantStockMap[v.id]!!
                                             Box(
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(6.dp))
                                                     .background(
-                                                        if (variantStockMap[v.id]!! <= 0) StatusError.copy(alpha = 0.15f)
-                                                        else if (variantStockMap[v.id]!! <= 5) Color(0xFFF59E0B).copy(alpha = 0.15f)
+                                                        if (stock <= 0) StatusError.copy(alpha = 0.15f)
+                                                        else if (stock <= 5) Color(0xFFF59E0B).copy(alpha = 0.15f)
                                                         else StatusSuccess.copy(alpha = 0.15f)
                                                     )
                                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
-                                                    text = "${variantStockMap[v.id]} ${product.unit}",
+                                                    text = "$stock ${product.unit}",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = if (variantStockMap[v.id]!! <= 0) StatusError
-                                                    else if (variantStockMap[v.id]!! <= 5) Color(0xFFF59E0B)
-                                                    else SecondaryTeal
+                                                    color = if (stock <= 0) StatusError
+                                                    else if (stock <= 5) Color(0xFFF59E0B)
+                                                    else SecondaryTeal,
+                                                    maxLines = 1,
+                                                    softWrap = false
                                                 )
                                             }
                                         }
@@ -567,26 +592,32 @@ fun ProductDetailDialog(
                                     Text(
                                         text = "Color: ${v.color ?: "-"} • Size: ${v.size ?: "-"}",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
+                                        color = TextSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     if (!v.barcode.isNullOrBlank()) {
                                         Text(
                                             text = "Barcode: ${v.barcode}",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = TextMuted
+                                            color = TextMuted,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
 
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text(
                                         text = Formatters.formatMoney(v.variantPriceMinor, currency, language),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = PrimaryPurple
+                                        color = PrimaryPurple,
+                                        maxLines = 1,
+                                        softWrap = false
                                     )
                                     Icon(
                                         imageVector = Icons.Default.ChevronRight,
@@ -599,15 +630,22 @@ fun ProductDetailDialog(
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Divider(color = ERPDivider)
 
+            // Fixed Bottom Action Bar
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 12.dp)
+            ) {
                 if (onPrintLabels != null) {
                     ERPActionButton(
                         text = if (language == AppLanguage.BANGLA) "বারকোড ও স্টিকার লেবেল প্রিন্ট করুন" else "Print Barcode & Sticker Labels",
                         onClick = { onPrintLabels(product, variants) },
                         variant = ERPButtonVariant.PRIMARY,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                     )
                 }
 
@@ -617,6 +655,7 @@ fun ProductDetailDialog(
                     variant = ERPButtonVariant.OUTLINED,
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
             }
         }
     }

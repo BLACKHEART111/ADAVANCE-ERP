@@ -141,7 +141,9 @@ private fun ButtonInnerContent(
             text = text,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
-            color = tint
+            color = tint,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }

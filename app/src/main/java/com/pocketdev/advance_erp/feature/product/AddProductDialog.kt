@@ -10,12 +10,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -79,7 +83,9 @@ import com.pocketdev.advance_erp.core.designsystem.TextPrimary
 import com.pocketdev.advance_erp.core.designsystem.TextSecondary
 import com.pocketdev.advance_erp.core.designsystem.rememberImageModel
 import com.pocketdev.advance_erp.core.model.AppLanguage
+import com.pocketdev.advance_erp.core.model.CurrencyCode
 import com.pocketdev.advance_erp.core.model.Money
+import com.pocketdev.advance_erp.core.util.Formatters
 import com.pocketdev.advance_erp.data.dao.ProductWithDetails
 import com.pocketdev.advance_erp.data.entity.ProductCategory
 import com.pocketdev.advance_erp.data.entity.Warehouse
@@ -169,6 +175,8 @@ fun AddProductDialog(
     var variantSku by remember { mutableStateOf("") }
     var variantBarcode by remember { mutableStateOf("") }
     var variantQtyStr by remember { mutableStateOf("") }
+    var variantCostStr by remember { mutableStateOf("") }
+    var variantPriceStr by remember { mutableStateOf("") }
     val variantPhotos = remember { mutableStateListOf<GalleryItemDraft>() }
 
     // Variant inline editing index
@@ -202,6 +210,15 @@ fun AddProductDialog(
         productPhotos.clear()
         deletedImageIds.clear()
         variants.clear()
+        showVariantInputs = false
+        variantColor = ""
+        variantSize = ""
+        variantSku = ""
+        variantBarcode = ""
+        variantQtyStr = ""
+        variantCostStr = ""
+        variantPriceStr = ""
+        variantPhotos.clear()
         editingVariantIdx = null
         errorMessage = null
     }
@@ -240,22 +257,28 @@ fun AddProductDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.94f)
+                .fillMaxWidth(0.96f)
+                .fillMaxHeight(0.92f)
+                .widthIn(max = 680.dp)
                 .clip(RoundedCornerShape(20.dp)),
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 8.dp
         ) {
             Column(
                 modifier = Modifier
-                    .padding(20.dp)
-                    .verticalScroll(rememberScrollState())
+                    .fillMaxSize()
+                    .navigationBarsPadding()
+                    .imePadding()
             ) {
                 // Header
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (selectedExistingProduct != null) {
                                 if (language == AppLanguage.BANGLA) "পণ্য স্টক বৃদ্ধি ও সম্পাদনা" else "Restock & Edit Product"
@@ -280,7 +303,16 @@ fun AddProductDialog(
                     }
                 }
 
-                Divider(color = ERPDivider, modifier = Modifier.padding(vertical = 12.dp))
+                Divider(color = ERPDivider)
+
+                // Scrollable Form Body
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                ) {
 
                 if (errorMessage != null) {
                     Text(
@@ -829,7 +861,7 @@ fun AddProductDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
                         Text(
                             text = "${stringResource(R.string.variants)} (${variants.size})",
                             style = MaterialTheme.typography.titleMedium,
@@ -849,10 +881,15 @@ fun AddProductDialog(
                     }
 
                     ERPActionButton(
-                        text = stringResource(R.string.add_variant),
+                        text = if (showVariantInputs) {
+                            if (language == AppLanguage.BANGLA) "বাতিল" else "Cancel"
+                        } else {
+                            if (language == AppLanguage.BANGLA) "ভ্যারিয়েন্ট যোগ" else "Add Variant"
+                        },
                         onClick = { showVariantInputs = !showVariantInputs },
-                        variant = ERPButtonVariant.OUTLINED,
-                        icon = Icons.Default.Add
+                        variant = if (showVariantInputs) ERPButtonVariant.GHOST else ERPButtonVariant.OUTLINED,
+                        icon = if (showVariantInputs) Icons.Default.Close else Icons.Default.Add,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                     )
                 }
 
@@ -964,6 +1001,39 @@ fun AddProductDialog(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        // Variant Cost & Selling Price
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = variantCostStr,
+                                onValueChange = { variantCostStr = it },
+                                label = {
+                                    Text(if (language == AppLanguage.BANGLA) "ভ্যারিয়েন্ট ক্রয় খরচ" else "Variant Cost Price")
+                                },
+                                placeholder = { Text(purchasePriceStr.ifBlank { "0" }) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            OutlinedTextField(
+                                value = variantPriceStr,
+                                onValueChange = { variantPriceStr = it },
+                                label = {
+                                    Text(if (language == AppLanguage.BANGLA) "ভ্যারিয়েন্ট বিক্রয় মূল্য" else "Variant Selling Price")
+                                },
+                                placeholder = { Text(sellingPriceStr.ifBlank { "0" }) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
                         // Variant Opening Quantity
                         OutlinedTextField(
                             value = variantQtyStr,
@@ -996,15 +1066,15 @@ fun AddProductDialog(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         ERPActionButton(
-                            text = "Add Variant to List",
+                            text = if (language == AppLanguage.BANGLA) "তালিকায় ভ্যারিয়েন্ট যোগ করুন" else "Add Variant to List",
                             onClick = {
                                 val skuToUse = if (variantSku.isNotBlank()) {
                                     variantSku.trim().uppercase()
                                 } else {
                                     "${baseSku.ifBlank { "PRD" }}-${variants.size + 1}"
                                 }
-                                val cost = Money.parseFromString(purchasePriceStr).minorUnits
-                                val price = Money.parseFromString(sellingPriceStr).minorUnits
+                                val cost = Money.parseFromString(variantCostStr.ifBlank { purchasePriceStr }).minorUnits
+                                val price = Money.parseFromString(variantPriceStr.ifBlank { sellingPriceStr }).minorUnits
 
                                 variants.add(
                                     NewVariantDraft(
@@ -1025,6 +1095,8 @@ fun AddProductDialog(
                                 variantSize = ""
                                 variantSku = ""
                                 variantBarcode = ""
+                                variantCostStr = ""
+                                variantPriceStr = ""
                                 variantQtyStr = ""
                                 variantPhotos.clear()
                                 showVariantInputs = false
@@ -1086,16 +1158,20 @@ fun AddProductDialog(
 
                                     Spacer(modifier = Modifier.width(10.dp))
 
-                                    Column(modifier = Modifier.weight(1f)) {
+                                    Column(modifier = Modifier.weight(1f).padding(end = 4.dp)) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
                                             Text(
                                                 text = v.sku,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.Bold,
-                                                color = TextPrimary
+                                                color = TextPrimary,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f, fill = false)
                                             )
                                             if (v.isExistingVariant) {
                                                 Box(
@@ -1108,16 +1184,31 @@ fun AddProductDialog(
                                                         text = if (language == AppLanguage.BANGLA) "বিদ্যমান" else "Existing",
                                                         style = MaterialTheme.typography.labelSmall,
                                                         color = SecondaryTeal,
-                                                        fontWeight = FontWeight.Bold
+                                                        fontWeight = FontWeight.Bold,
+                                                        maxLines = 1,
+                                                        softWrap = false
                                                     )
                                                 }
                                             }
                                         }
-                                        Text(
-                                            text = "Color: ${v.color.ifBlank { "-" }} • Size: ${v.size.ifBlank { "-" }}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = TextSecondary
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = "Color: ${v.color.ifBlank { "-" }} • Size: ${v.size.ifBlank { "-" }}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                            if (v.priceMinor > 0L) {
+                                                Text(
+                                                    text = "• ৳ ${Formatters.formatMoney(v.priceMinor, CurrencyCode.BDT, language)}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = PrimaryPurple
+                                                )
+                                            }
+                                        }
                                     }
 
                                     // Action buttons: Edit details & Delete
@@ -1295,6 +1386,33 @@ fun AddProductDialog(
                                         )
                                     }
 
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedTextField(
+                                            value = if (v.costMinor > 0) (v.costMinor / 100.0).toString() else "",
+                                            onValueChange = { input ->
+                                                val minor = Money.parseFromString(input).minorUnits
+                                                variants[idx] = v.copy(costMinor = minor)
+                                            },
+                                            label = { Text(if (language == AppLanguage.BANGLA) "ক্রয় খরচ" else "Cost Price") },
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                            modifier = Modifier.weight(1f),
+                                            singleLine = true
+                                        )
+                                        OutlinedTextField(
+                                            value = if (v.priceMinor > 0) (v.priceMinor / 100.0).toString() else "",
+                                            onValueChange = { input ->
+                                                val minor = Money.parseFromString(input).minorUnits
+                                                variants[idx] = v.copy(priceMinor = minor)
+                                            },
+                                            label = { Text(if (language == AppLanguage.BANGLA) "বিক্রয় মূল্য" else "Selling Price") },
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                            modifier = Modifier.weight(1f),
+                                            singleLine = true
+                                        )
+                                    }
+
                                     Spacer(modifier = Modifier.height(8.dp))
                                     TextButton(
                                         onClick = { editingVariantIdx = null },
@@ -1312,12 +1430,17 @@ fun AddProductDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                }
 
-                // Action Buttons
+                Divider(color = ERPDivider)
+
+                // Fixed Bottom Action Bar
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     ERPActionButton(
                         text = stringResource(R.string.cancel),
