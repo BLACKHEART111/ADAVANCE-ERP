@@ -1,7 +1,10 @@
 package com.pocketdev.advance_erp.data.repository
 
 import android.content.Context
+import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
+import android.net.Uri
+import androidx.core.content.FileProvider
 import com.pocketdev.advance_erp.core.database.AdvanceErpDatabase
 import com.pocketdev.advance_erp.data.dao.AuditLogDao
 import com.pocketdev.advance_erp.data.dao.BackupDao
@@ -49,17 +52,19 @@ class BackupRepositoryImpl @Inject constructor(
         require(dbFile.exists()) { "Database file does not exist at ${dbFile.absolutePath}" }
 
         val backupDir = File(context.filesDir, "backups").apply { if (!exists()) mkdirs() }
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        val fileName = "advance_erp_backup_${timeStamp}.zip"
+        // Format file name based on date/mm/yy (dd_MM_yy_HHmmss)
+        val timeStamp = SimpleDateFormat("dd_MM_yy_HHmmss", Locale.US).format(Date())
+        val fileName = "AdvanceERP_Backup_${timeStamp}.zip"
         val zipBackupFile = File(backupDir, fileName)
 
         val imagesDir = File(context.filesDir, "product_images")
         val imageFiles = if (imagesDir.exists()) imagesDir.listFiles()?.filter { it.isFile } ?: emptyList() else emptyList()
+        val avatarFiles = context.filesDir.listFiles()?.filter { it.isFile && (it.name.startsWith("avatar_") || it.name.endsWith(".jpg") || it.name.endsWith(".png")) && !it.name.endsWith(".zip") } ?: emptyList()
 
         val schemaVersion = database.openHelper.readableDatabase.version
         val dbChecksum = calculateSha256(dbFile)
 
-        // Write comprehensive ZIP archive bundling SQLite database + product_images/ + metadata.json
+        // Write comprehensive ZIP archive bundling SQLite database + product_images/ + avatars/ + metadata.json
         ZipOutputStream(FileOutputStream(zipBackupFile)).use { zos ->
             // Entry 1: Database
             val dbEntry = ZipEntry("database/advance_erp.db")
@@ -75,7 +80,15 @@ class BackupRepositoryImpl @Inject constructor(
                 zos.closeEntry()
             }
 
-            // Entry N+1: Metadata JSON
+            // Entry N..M: Avatar & Profile Images
+            for (av in avatarFiles) {
+                val avEntry = ZipEntry("avatars/${av.name}")
+                zos.putNextEntry(avEntry)
+                FileInputStream(av).use { fis -> fis.copyTo(zos) }
+                zos.closeEntry()
+            }
+
+            // Entry M+1: Metadata JSON
             val metadataContent = buildString {
                 append("{\n")
                 append("  \"application\": \"ADVANCE ERP\",\n")
@@ -83,7 +96,7 @@ class BackupRepositoryImpl @Inject constructor(
                 append("  \"timestamp\": ${System.currentTimeMillis()},\n")
                 append("  \"schemaVersion\": $schemaVersion,\n")
                 append("  \"dbChecksumSha256\": \"$dbChecksum\",\n")
-                append("  \"totalImages\": ${imageFiles.size},\n")
+                append("  \"totalImages\": ${imageFiles.size + avatarFiles.size},\n")
                 append("  \"notes\": \"${notes?.replace("\"", "\\\"") ?: "Offline Comprehensive Backup"}\"\n")
                 append("}\n")
             }
@@ -224,7 +237,7 @@ class BackupRepositoryImpl @Inject constructor(
                         }
                     }
 
-                    // Extract product images
+                    // Extract product images & avatars
                     val targetImagesDir = File(context.filesDir, "product_images").apply { if (!exists()) mkdirs() }
                     val entries = zip.entries()
                     while (entries.hasMoreElements()) {
@@ -234,6 +247,14 @@ class BackupRepositoryImpl @Inject constructor(
                             val destImgFile = File(targetImagesDir, imgFileName)
                             zip.getInputStream(entry).use { input ->
                                 FileOutputStream(destImgFile).use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                        } else if (entry.name.startsWith("avatars/") && !entry.isDirectory) {
+                            val avFileName = entry.name.removePrefix("avatars/")
+                            val destAvFile = File(context.filesDir, avFileName)
+                            zip.getInputStream(entry).use { input ->
+                                FileOutputStream(destAvFile).use { output ->
                                     input.copyTo(output)
                                 }
                             }
@@ -269,6 +290,57 @@ class BackupRepositoryImpl @Inject constructor(
             e.printStackTrace()
             Result.failure(e)
         }
+    }
+
+    override suspend fun restoreFromUri(context: Context, uri: Uri): Result<Boolean> = withContext(Dispatchers.IO) {
+        val tempRestoreFile = File(context.cacheDir, "temp_restore_${System.currentTimeMillis()}.zip")
+        try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(tempRestoreFile).use { output ->
+                    input.copyTo(output)
+                }
+            } ?: return@withContext Result.failure(IllegalArgumentException("Cannot open or read chosen backup file"))
+
+            restoreBackup(tempRestoreFile)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        } finally {
+            if (tempRestoreFile.exists()) {
+                tempRestoreFile.delete()
+            }
+        }
+    }
+
+    override fun shareBackup(context: Context, backupFile: File) {
+        require(backupFile.exists()) { "Backup file does not exist at ${backupFile.absolutePath}" }
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            backupFile
+        )
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, "Advance ERP Backup - ${backupFile.name}")
+            putExtra(Intent.EXTRA_TEXT, "Advance ERP Full System Backup (${backupFile.name})")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val chooser = Intent.createChooser(shareIntent, "শেয়ার করুন / Share Backup").apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(chooser)
+    }
+
+    override suspend fun deleteBackup(recordId: String): Boolean = withContext(Dispatchers.IO) {
+        val records = backupDao.getAllBackupRecordsSync()
+        val record = records.firstOrNull { it.id == recordId }
+        if (record != null) {
+            val file = File(record.filePath)
+            if (file.exists()) file.delete()
+            backupDao.deleteBackupRecord(recordId)
+            true
+        } else false
     }
 
     private fun calculateSha256(file: File): String {

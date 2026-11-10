@@ -1,10 +1,19 @@
 package com.pocketdev.advance_erp.feature.sales
 
+import android.app.Activity
+import android.content.Intent
+import android.provider.ContactsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.ContactPhone
+import androidx.compose.ui.platform.LocalContext
+import com.pocketdev.advance_erp.core.util.ContactPickerHelper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -83,6 +92,25 @@ fun CustomerLookupDialog(
     var newEmail by remember { mutableStateOf("") }
     var newOpeningBalanceStr by remember { mutableStateOf("0.00") }
     var formError by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+
+    val contactPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                val (pickedName, pickedPhone) = ContactPickerHelper.extractContactInfo(context, uri)
+                if (!pickedName.isNullOrBlank()) {
+                    newName = pickedName
+                    formError = null
+                }
+                if (!pickedPhone.isNullOrBlank()) {
+                    newPhone = pickedPhone
+                    formError = null
+                }
+            }
+        }
+    }
 
     val filteredCustomers = remember(searchQuery, customers) {
         val q = searchQuery.trim().lowercase()
@@ -340,6 +368,42 @@ fun CustomerLookupDialog(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // Contact Picker Auto-fill Button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isBangla) "গ্রাহকের তথ্য পূরণ করুন" else "Fill Customer Information",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Button(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+                                    contactPickerLauncher.launch(intent)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.ContactPhone,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = Color.White
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isBangla) "ফোন কন্টাক্ট থেকে আনুন" else "Pick from Contacts",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
                         OutlinedTextField(
                             value = newName,
                             onValueChange = {

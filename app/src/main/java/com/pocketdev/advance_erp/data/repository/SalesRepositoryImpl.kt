@@ -103,6 +103,7 @@ class SalesRepositoryImpl @Inject constructor(
                     address = draft.newCustomerDraft.address.trim(),
                     creditLimitMinor = 0L,
                     outstandingBalanceMinor = draft.newCustomerDraft.openingBalanceMinor,
+                    profileImagePath = draft.newCustomerDraft.profileImagePath,
                     isActive = true,
                     createdAt = System.currentTimeMillis()
                 )

@@ -3,6 +3,8 @@ package com.pocketdev.advance_erp.feature.inventory
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pocketdev.advance_erp.core.ai.StockForecastEngine
+import com.pocketdev.advance_erp.core.ai.StockForecastSummary
 import com.pocketdev.advance_erp.core.datastore.UserPreferencesRepository
 import com.pocketdev.advance_erp.core.model.AppLanguage
 import com.pocketdev.advance_erp.core.model.CurrencyCode
@@ -13,7 +15,9 @@ import com.pocketdev.advance_erp.data.dao.BusinessProfileDao
 import com.pocketdev.advance_erp.data.dao.FifoConsumptionWithDetails
 import com.pocketdev.advance_erp.data.dao.InventoryCostAdjustmentWithDetails
 import com.pocketdev.advance_erp.data.dao.InventoryReconciliationItemWithDetails
+import com.pocketdev.advance_erp.data.dao.ProductDao
 import com.pocketdev.advance_erp.data.dao.ProductWithDetails
+import com.pocketdev.advance_erp.data.dao.SalesDao
 import com.pocketdev.advance_erp.data.dao.StockBalanceDao
 import com.pocketdev.advance_erp.data.dao.StockItemOverview
 import com.pocketdev.advance_erp.data.dao.StockMovementWithDetails
@@ -23,6 +27,7 @@ import com.pocketdev.advance_erp.data.entity.InventoryReconciliation
 import com.pocketdev.advance_erp.data.entity.ProductCategory
 import com.pocketdev.advance_erp.data.entity.ProductImage
 import com.pocketdev.advance_erp.data.entity.ProductVariant
+import com.pocketdev.advance_erp.data.entity.SalesInvoiceItem
 import com.pocketdev.advance_erp.data.entity.Warehouse
 import com.pocketdev.advance_erp.domain.repository.CostHistoryRepository
 import com.pocketdev.advance_erp.domain.repository.InventoryRepository
@@ -113,7 +118,10 @@ data class InventoryUiState(
     val userRole: UserRole = UserRole.OWNER_ADMIN,
     val canViewCost: Boolean = true,
     // Variant Stock
-    val variantStockMap: Map<String, Int> = emptyMap()
+    val variantStockMap: Map<String, Int> = emptyMap(),
+    // AI Stock Forecast
+    val showStockForecastDialog: Boolean = false,
+    val stockForecastSummary: StockForecastSummary? = null
 )
 
 @HiltViewModel
@@ -123,8 +131,14 @@ class InventoryViewModel @Inject constructor(
     private val costHistoryRepository: CostHistoryRepository,
     private val businessProfileDao: BusinessProfileDao,
     private val preferencesRepository: UserPreferencesRepository,
-    private val stockBalanceDao: StockBalanceDao
+    private val stockBalanceDao: StockBalanceDao,
+    private val productDao: ProductDao,
+    private val salesDao: SalesDao
 ) : ViewModel() {
+
+    init {
+        loadStockForecast()
+    }
 
     private val _selectedTab = MutableStateFlow(InventoryTab.STOCK_OVERVIEW)
     private val _selectedWarehouseId = MutableStateFlow<String?>(null)
@@ -133,6 +147,8 @@ class InventoryViewModel @Inject constructor(
     private val _showAdjustDialog = MutableStateFlow(false)
     private val _showTransferDialog = MutableStateFlow(false)
     private val _showScannerDialog = MutableStateFlow(false)
+    private val _showStockForecastDialog = MutableStateFlow(false)
+    private val _stockForecastSummary = MutableStateFlow<StockForecastSummary?>(null)
     private val _selectedProductForDetail = MutableStateFlow<ProductWithDetails?>(null)
     private val _selectedProductVariants = MutableStateFlow<List<ProductVariant>>(emptyList())
     private val _selectedProductImages = MutableStateFlow<List<ProductImage>>(emptyList())
@@ -161,8 +177,13 @@ class InventoryViewModel @Inject constructor(
         combine(inventoryRepository.getAllWarehouses(), productRepository.getAllProducts(), productRepository.getAllCategories()) { whs, prods, cats ->
             Triple(whs, prods, cats)
         },
-        combine(_showAdjustDialog, _showTransferDialog, _showScannerDialog, _userMessage) { showAdj, showTr, showScan, msg ->
-            DialogFlags(showAdj, showTr, showScan, msg)
+        combine(
+            combine(_showAdjustDialog, _showTransferDialog, _showScannerDialog) { a, t, s -> Triple(a, t, s) },
+            _userMessage,
+            _showStockForecastDialog,
+            _stockForecastSummary
+        ) { (showAdj, showTr, showScan), msg, showForecast, forecastSummary ->
+            DialogFlags(showAdj, showTr, showScan, msg, showForecast, forecastSummary)
         },
         combine(
             combine(_selectedProductForDetail, _selectedProductVariants, _selectedProductImages, _preSelectedVariantId, _variantStockMap) { prod, vars, imgs, preVarId, varStock ->
@@ -178,7 +199,7 @@ class InventoryViewModel @Inject constructor(
         val (tab, whId, query) = p1
         val (catId, lang, curr) = p2
         val (whs, prods, cats) = p3
-        val (showAdj, showTr, showScan, msg) = p4
+        val (showAdj, showTr, showScan, msg, showForecast, forecastSummary) = p4
         val (detailState, sortRole) = p5
         val (prod, vars, imgs, preVarId) = detailState
         val (sort, statusFilter, role) = sortRole
@@ -203,7 +224,9 @@ class InventoryViewModel @Inject constructor(
             sortOption = sort,
             stockStatusFilter = statusFilter,
             userRole = role,
-            variantStock = detailState.variantStock
+            variantStock = detailState.variantStock,
+            showForecast = showForecast,
+            forecastSummary = forecastSummary
         )
     }
 
@@ -395,7 +418,9 @@ class InventoryViewModel @Inject constructor(
                 stockStatusFilter = p.stockStatusFilter,
                 userRole = p.userRole,
                 canViewCost = canViewCost,
-                variantStockMap = p.variantStock
+                variantStockMap = p.variantStock,
+                showStockForecastDialog = p.showForecast,
+                stockForecastSummary = p.forecastSummary
             )
         }
     }.stateIn(
@@ -403,6 +428,37 @@ class InventoryViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = InventoryUiState()
     )
+
+    fun openStockForecastDialog() {
+        loadStockForecast()
+        _showStockForecastDialog.value = true
+    }
+
+    fun closeStockForecastDialog() {
+        _showStockForecastDialog.value = false
+    }
+
+    fun loadStockForecast() {
+        viewModelScope.launch {
+            try {
+                val products = productDao.getAllProductsWithDetails().first()
+                val invoices = salesDao.getAllInvoicesSync()
+                val invoiceItems = mutableListOf<SalesInvoiceItem>()
+                for (inv in invoices.take(200)) {
+                    invoiceItems.addAll(salesDao.getItemsForInvoice(inv.id))
+                }
+                val summary = StockForecastEngine.generateForecast(
+                    products = products,
+                    invoices = invoices,
+                    invoiceItems = invoiceItems,
+                    analysisWindowDays = 30
+                )
+                _stockForecastSummary.value = summary
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     fun onTabSelect(tab: InventoryTab) {
         _selectedTab.value = tab
@@ -738,7 +794,9 @@ private data class DialogFlags(
     val showAdj: Boolean,
     val showTr: Boolean,
     val showScan: Boolean,
-    val msg: String?
+    val msg: String?,
+    val showForecast: Boolean = false,
+    val forecastSummary: StockForecastSummary? = null
 )
 
 private data class ProductDetailState(
@@ -770,7 +828,9 @@ private data class InventoryFilterParams(
     val sortOption: InventorySortOption,
     val stockStatusFilter: StockStatusFilter,
     val userRole: UserRole,
-    val variantStock: Map<String, Int> = emptyMap()
+    val variantStock: Map<String, Int> = emptyMap(),
+    val showForecast: Boolean = false,
+    val forecastSummary: StockForecastSummary? = null
 )
 
 private data class InventoryMetrics(

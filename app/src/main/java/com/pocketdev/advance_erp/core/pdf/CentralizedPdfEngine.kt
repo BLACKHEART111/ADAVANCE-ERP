@@ -228,7 +228,12 @@ object CentralizedPdfEngine {
 
             // Company Logo
             try {
-                val logo = BitmapFactory.decodeResource(context.resources, R.drawable.logo_compact_white)
+                val customLogoFile = businessProfile?.logoPath?.let { java.io.File(it) }
+                val logo = if (customLogoFile != null && customLogoFile.exists()) {
+                    BitmapFactory.decodeFile(customLogoFile.absolutePath)
+                } else {
+                    BitmapFactory.decodeResource(context.resources, R.drawable.logo_compact_white)
+                }
                 if (logo != null) {
                     val logoH = 26f
                     val logoW = logoH * (logo.width.toFloat() / logo.height.toFloat())

@@ -1,5 +1,31 @@
 package com.pocketdev.advance_erp.feature.contacts
 
+import android.app.Activity
+import android.content.Intent
+import android.provider.ContactsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ContactPhone
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.pocketdev.advance_erp.core.util.AppMediaStorage
+import com.pocketdev.advance_erp.core.util.ContactPickerHelper
+import com.pocketdev.advance_erp.feature.sales.DueReminderDialog
+import kotlinx.coroutines.launch
+import java.io.File
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -86,6 +112,24 @@ fun ContactsScreen(
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var customerToDelete by remember { mutableStateOf<Customer?>(null) }
+    var customerForPhotoUpdate by remember { mutableStateOf<Customer?>(null) }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val customerPhotoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { pickedUri ->
+            customerForPhotoUpdate?.let { targetCust ->
+                coroutineScope.launch {
+                    try {
+                        val savedPath = AppMediaStorage.saveCustomerPhoto(context, pickedUri, targetCust.id)
+                        viewModel.updateCustomerPhoto(targetCust, savedPath)
+                    } catch (_: Exception) {}
+                }
+            }
+        }
+    }
 
     LaunchedEffect(initialTab) {
         viewModel.onTabSelect(initialTab)
@@ -187,9 +231,63 @@ fun ContactsScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column {
-                                            Text(text = c.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                            Text(text = "Code: ${c.customerCode}", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                                        Row(
+                                            modifier = Modifier.weight(1f),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Customer Profile Photo Avatar
+                                            val photoPath = c.profileImagePath
+                                            val hasPhoto = !photoPath.isNullOrBlank() && File(photoPath).exists()
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(46.dp)
+                                                    .clip(CircleShape)
+                                                    .background(PrimaryPurple.copy(alpha = 0.12f))
+                                                    .clickable {
+                                                        customerForPhotoUpdate = c
+                                                        customerPhotoLauncher.launch(
+                                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                                        )
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                if (hasPhoto) {
+                                                    AsyncImage(
+                                                        model = ImageRequest.Builder(context)
+                                                            .data(File(photoPath!!))
+                                                            .crossfade(true)
+                                                            .build(),
+                                                        contentDescription = c.name,
+                                                        modifier = Modifier
+                                                            .size(46.dp)
+                                                            .clip(CircleShape)
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        text = c.name.take(1).uppercase(),
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = PrimaryPurple
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.width(10.dp))
+
+                                            Column {
+                                                Text(
+                                                    text = c.name,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = TextPrimary
+                                                )
+                                                Text(
+                                                    text = "Code: ${c.customerCode}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = TextSecondary
+                                                )
+                                            }
                                         }
 
                                         Column(horizontalAlignment = Alignment.End) {
@@ -199,7 +297,11 @@ fun ContactsScreen(
                                                 fontWeight = FontWeight.Bold,
                                                 color = if (c.outstandingBalanceMinor > 0) StatusError else StatusSuccess
                                             )
-                                            Text(text = stringResource(R.string.outstanding_balance), style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                                            Text(
+                                                text = stringResource(R.string.outstanding_balance),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = TextMuted
+                                            )
                                         }
                                     }
 
@@ -224,16 +326,46 @@ fun ContactsScreen(
                                             Spacer(modifier = Modifier.width(4.dp))
                                             Text(text = c.address, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1)
                                         }
-                                        IconButton(
-                                            onClick = { customerToDelete = c },
-                                            modifier = Modifier.size(24.dp)
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.DeleteOutline,
-                                                contentDescription = "Delete Customer",
-                                                tint = StatusError,
-                                                modifier = Modifier.size(18.dp)
-                                            )
+                                            if (c.outstandingBalanceMinor > 0) {
+                                                Button(
+                                                    onClick = { viewModel.openDueReminder(c) },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                                    modifier = Modifier.height(30.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Send,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(12.dp),
+                                                        tint = Color.White
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(
+                                                        text = if (state.language == AppLanguage.BANGLA) "বকেয়া তাগাদা" else "Due Reminder",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color.White
+                                                    )
+                                                }
+                                            }
+
+                                            IconButton(
+                                                onClick = { customerToDelete = c },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.DeleteOutline,
+                                                    contentDescription = "Delete Customer",
+                                                    tint = StatusError,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -300,13 +432,22 @@ fun ContactsScreen(
     if (state.showAddDialog) {
         AddContactDialog(
             isCustomer = state.selectedTab == ContactsTab.CUSTOMERS,
+            isBangla = state.language == AppLanguage.BANGLA,
             onDismiss = { viewModel.setAddDialogVisible(false) },
-            onAddCustomer = { name, phone, email, address, limit ->
-                viewModel.addCustomer(name, phone, email, address, limit)
+            onAddCustomer = { name, phone, email, address, limit, photoPath ->
+                viewModel.addCustomer(name, phone, email, address, limit, photoPath)
             },
             onAddSupplier = { name, contact, phone, email, address, country, curr ->
                 viewModel.addSupplier(name, contact, phone, email, address, country, curr)
             }
+        )
+    }
+
+    if (state.activeDueReminderData != null) {
+        DueReminderDialog(
+            data = state.activeDueReminderData!!,
+            initialIsBangla = state.language == AppLanguage.BANGLA,
+            onDismiss = { viewModel.dismissDueReminderDialog() }
         )
     }
 
@@ -387,10 +528,14 @@ fun ContactsScreen(
 @Composable
 private fun AddContactDialog(
     isCustomer: Boolean,
+    isBangla: Boolean = false,
     onDismiss: () -> Unit,
-    onAddCustomer: (name: String, phone: String, email: String?, address: String, creditLimitMinor: Long) -> Unit,
+    onAddCustomer: (name: String, phone: String, email: String?, address: String, creditLimitMinor: Long, profileImagePath: String?) -> Unit,
     onAddSupplier: (companyName: String, contactPerson: String?, phone: String, email: String?, address: String, country: String, currency: String) -> Unit
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     var name by remember { mutableStateOf("") }
     var contactPerson by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -399,6 +544,25 @@ private fun AddContactDialog(
     var creditLimitStr by remember { mutableStateOf("") }
     var country by remember { mutableStateOf("China") }
     var currency by remember { mutableStateOf("CNY") }
+    var profileImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
+    val contactPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                val (pickedName, pickedPhone) = ContactPickerHelper.extractContactInfo(context, uri)
+                if (!pickedName.isNullOrBlank()) name = pickedName
+                if (!pickedPhone.isNullOrBlank()) phone = pickedPhone
+            }
+        }
+    }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        profileImageUri = uri
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -411,7 +575,9 @@ private fun AddContactDialog(
             color = MaterialTheme.colorScheme.surface
         ) {
             Column(
-                modifier = Modifier.padding(20.dp)
+                modifier = Modifier
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -419,7 +585,11 @@ private fun AddContactDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (isCustomer) stringResource(R.string.add_customer) else stringResource(R.string.add_supplier),
+                        text = if (isCustomer) {
+                            if (isBangla) "নতুন গ্রাহক নিবন্ধন" else stringResource(R.string.add_customer)
+                        } else {
+                            if (isBangla) "নতুন সরবরাহকারী যোগ" else stringResource(R.string.add_supplier)
+                        },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -430,10 +600,94 @@ private fun AddContactDialog(
 
                 Divider(color = ERPDivider, modifier = Modifier.padding(vertical = 12.dp))
 
+                if (isCustomer) {
+                    // Profile Photo & Phone Contact Import Header Row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(PrimaryPurple.copy(alpha = 0.12f))
+                                    .clickable {
+                                        photoPickerLauncher.launch(
+                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (profileImageUri != null) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(profileImageUri)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = "Customer Photo",
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .clip(CircleShape)
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.CameraAlt,
+                                        contentDescription = "Add Photo",
+                                        tint = PrimaryPurple,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = if (profileImageUri != null) {
+                                        if (isBangla) "ছবি নির্বাচিত" else "Photo Selected"
+                                    } else {
+                                        if (isBangla) "প্রোফাইল ছবি যোগ করুন" else "Add Profile Photo"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = if (isBangla) "ট্যাপ করে ছবি বাছুন" else "Tap avatar to select",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextMuted,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+
+                        // Phone Contacts Picker Button
+                        Button(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+                                contactPickerLauncher.launch(intent)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.ContactPhone, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isBangla) "কন্টাক্ট থেকে আনুন" else "Pick from Contacts",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(if (isCustomer) stringResource(R.string.contact_name) else stringResource(R.string.company_name)) },
+                    label = { Text(if (isCustomer) (if (isBangla) "গ্রাহকের নাম *" else stringResource(R.string.contact_name)) else stringResource(R.string.company_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -453,7 +707,7 @@ private fun AddContactDialog(
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = { Text(stringResource(R.string.contact_phone)) },
+                    label = { Text(if (isBangla) "মোবাইল নম্বর *" else stringResource(R.string.contact_phone)) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     singleLine = true
@@ -494,7 +748,15 @@ private fun AddContactDialog(
                             if (name.isBlank() || phone.isBlank()) return@ERPActionButton
                             if (isCustomer) {
                                 val limit = Money.parseFromString(creditLimitStr).minorUnits
-                                onAddCustomer(name, phone, email, address, limit)
+                                coroutineScope.launch {
+                                    var savedPhotoPath: String? = null
+                                    if (profileImageUri != null) {
+                                        try {
+                                            savedPhotoPath = AppMediaStorage.saveCustomerPhoto(context, profileImageUri!!)
+                                        } catch (_: Exception) {}
+                                    }
+                                    onAddCustomer(name, phone, email, address, limit, savedPhotoPath)
+                                }
                             } else {
                                 onAddSupplier(name, contactPerson, phone, email, address, country, currency)
                             }

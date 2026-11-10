@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
@@ -264,6 +265,44 @@ fun InventoryScreen(
                                 .size(8.dp)
                                 .clip(CircleShape)
                                 .background(PrimaryPurple)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // AI Stock Forecast & Reorder Quick Action
+                val urgentReorders = state.stockForecastSummary?.urgentReorderCount ?: 0
+                val deadStockItems = state.stockForecastSummary?.deadStockCount ?: 0
+                val hasAlerts = urgentReorders > 0 || deadStockItems > 0
+
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (hasAlerts) Color(0xFFFFEBEE) else PrimaryPurple.copy(alpha = 0.1f))
+                        .border(
+                            1.dp,
+                            if (hasAlerts) Color(0xFFE57373) else PrimaryPurple.copy(alpha = 0.2f),
+                            RoundedCornerShape(10.dp)
+                        )
+                        .clickable { viewModel.openStockForecastDialog() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "AI Stock Forecast",
+                        tint = if (hasAlerts) Color(0xFFC53030) else PrimaryPurple,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    if (hasAlerts) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(3.dp)
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFC53030))
                         )
                     }
                 }
@@ -848,6 +887,15 @@ fun InventoryScreen(
                 viewModel.performCostAdjustment(costLayerId, newUnitCostMinor, reason)
             },
             onDismiss = { viewModel.closeCostAdjustment() }
+        )
+    }
+
+    // AI Stock Forecast & Dead Stock Dialog
+    if (state.showStockForecastDialog && state.stockForecastSummary != null) {
+        StockForecastDialog(
+            summary = state.stockForecastSummary!!,
+            isBangla = state.language == com.pocketdev.advance_erp.core.model.AppLanguage.BANGLA,
+            onDismiss = { viewModel.closeStockForecastDialog() }
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.pocketdev.advance_erp.core.pdf
 
+import com.pocketdev.advance_erp.core.ai.StockForecastSummary
 import com.pocketdev.advance_erp.core.util.Formatters
 import com.pocketdev.advance_erp.data.dao.StockItemOverview
 import com.pocketdev.advance_erp.data.entity.Customer
@@ -2107,6 +2108,75 @@ object CentralizedPdfReportRegistry {
             titleBn = if (invoice.status == "SALES_ORDER") "বিক্রয় আদেশপত্র" else "মূল্য প্রস্তাবনা / কোটেশন",
             dateRangeText = "Date: ${dateFormat.format(Date(invoice.invoiceDate))}",
             filterText = "Valid for 15 Days | Warehouse: ${invoice.warehouseName}",
+            kpiBadges = kpis,
+            sections = listOf(PdfReportSection(columns = columns, rows = rows, summaryRows = summaries)),
+            isBangla = isBangla
+        )
+    }
+
+    /** Report 45: AI Stock Forecast & Dead Stock Audit */
+    fun buildStockForecastReport(
+        summary: StockForecastSummary,
+        isBangla: Boolean = false
+    ): CentralizedPdfReport {
+        val columns = listOf(
+            PdfReportColumn("Product Name", "পণ্যের নাম", widthWeight = 2.0f),
+            PdfReportColumn("SKU", "এসকেইউ", widthWeight = 1.0f),
+            PdfReportColumn("Stock", "স্টক", widthWeight = 0.8f, isRightAligned = true),
+            PdfReportColumn("30d Sold", "৩০ দিনের বিক্রি", widthWeight = 0.9f, isRightAligned = true),
+            PdfReportColumn("Velocity/Day", "দৈনিক বিক্রি", widthWeight = 1.0f, isRightAligned = true),
+            PdfReportColumn("Days Left", "দিন বাকি", widthWeight = 0.9f, isRightAligned = true),
+            PdfReportColumn("Capital Locked", "আটকে থাকা মূলধন", widthWeight = 1.3f, isRightAligned = true),
+            PdfReportColumn("AI Recommendation", "পরামর্শ", widthWeight = 2.2f)
+        )
+
+        val rows = summary.items.map { itm ->
+            PdfReportRow(
+                listOf(
+                    itm.productName,
+                    itm.sku,
+                    "${itm.currentStock}",
+                    "${itm.unitsSoldLast30Days}",
+                    "%.1f".format(itm.dailyVelocity),
+                    itm.daysUntilStockout?.let { "$it d" } ?: if (itm.isDeadStock) "Dead" else "-",
+                    "৳" + Formatters.formatMinorUnit(itm.capitalLockedMinor),
+                    if (isBangla) itm.recommendationBn.take(45) + "..." else itm.recommendationEn.take(45) + "..."
+                ),
+                isEmphasized = itm.isUrgentReorder || itm.isDeadStock
+            )
+        }
+
+        val summaries = listOf(
+            PdfReportRow(
+                listOf(
+                    "Total Inventory Capital",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "৳" + Formatters.formatMinorUnit(summary.totalInventoryCapitalMinor),
+                    "Dead Stock Capital: ৳" + Formatters.formatMinorUnit(summary.totalCapitalInDeadStockMinor)
+                ),
+                isSummary = true,
+                isEmphasized = true
+            )
+        )
+
+        val kpis = listOf(
+            PdfKpiBadge("Total Products", "বিশ্লেষিত পণ্য", "${summary.totalProductsAnalyzed}"),
+            PdfKpiBadge("Urgent Reorders", "জরুরি রিরর্ডার", "${summary.urgentReorderCount}"),
+            PdfKpiBadge("Dead Stock Items", "অচল পণ্য সংখ্যা", "${summary.deadStockCount}"),
+            PdfKpiBadge("Dead Capital", "অচল মূলধন", "৳" + Formatters.formatMinorUnit(summary.totalCapitalInDeadStockMinor))
+        )
+
+        return CentralizedPdfReport(
+            reportId = "RPT-45-AI-STOCK-FORECAST",
+            category = "Inventory",
+            titleEn = "AI Stock Reorder & Dead Stock Audit Report",
+            titleBn = "এআই স্টক পূর্বাভাস ও ডেড স্টক অডিট রিপোর্ট",
+            dateRangeText = "Generated: ${dateFormat.format(Date())} | Analysis: Last 30 Days Sales",
+            filterText = "All Inventory Items Evaluated by AI Velocity Engine",
             kpiBadges = kpis,
             sections = listOf(PdfReportSection(columns = columns, rows = rows, summaryRows = summaries)),
             isBangla = isBangla

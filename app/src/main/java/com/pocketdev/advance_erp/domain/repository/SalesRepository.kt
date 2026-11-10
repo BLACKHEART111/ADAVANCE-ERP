@@ -23,7 +23,8 @@ data class NewCustomerDraft(
     val phone: String,
     val address: String,
     val email: String? = null,
-    val openingBalanceMinor: Long = 0L
+    val openingBalanceMinor: Long = 0L,
+    val profileImagePath: String? = null
 )
 
 data class CustomerSummary(

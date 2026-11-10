@@ -14,6 +14,7 @@ interface ContactsRepository {
     fun getAllCustomers(): Flow<List<Customer>>
     fun getAllSuppliers(): Flow<List<Supplier>>
     suspend fun addCustomer(customer: Customer)
+    suspend fun updateCustomer(customer: Customer)
     suspend fun addSupplier(supplier: Supplier)
     suspend fun deleteOrArchiveCustomer(customerId: String, operator: String = "SYSTEM_ADMIN"): CustomerDeleteResult
 }

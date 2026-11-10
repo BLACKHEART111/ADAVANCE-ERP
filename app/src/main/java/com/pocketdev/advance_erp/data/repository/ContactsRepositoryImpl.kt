@@ -34,6 +34,10 @@ class ContactsRepositoryImpl @Inject constructor(
         customerDao.insertCustomer(customer)
     }
 
+    override suspend fun updateCustomer(customer: Customer) {
+        customerDao.updateCustomer(customer)
+    }
+
     override suspend fun addSupplier(supplier: Supplier) {
         supplierDao.insertSupplier(supplier)
     }

@@ -19,12 +19,21 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import java.io.File
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.pocketdev.advance_erp.core.designsystem.DeepNavy
@@ -56,8 +66,11 @@ fun CustomerLedgerDialog(
     customer: Customer,
     ledger: List<CustomerLedgerEntry>,
     isBangla: Boolean,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onShareWhatsAppStatement: (Customer) -> Unit = {},
+    onSendDueReminder: (Customer) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.US)
 
     Dialog(
@@ -83,20 +96,58 @@ fun CustomerLedgerDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(
-                            text = if (isBangla) "গ্রাহক লেজার / STATEMENT" else "Customer Ledger Statement",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "${customer.name} • Code: ${customer.customerCode} • ${customer.phone}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    Row(
+                        modifier = Modifier.weight(1f).padding(end = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val photoPath = customer.profileImagePath
+                        val hasPhoto = !photoPath.isNullOrBlank() && File(photoPath).exists()
+
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(PrimaryPurple.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (hasPhoto) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(File(photoPath!!))
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = customer.name,
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                )
+                            } else {
+                                Text(
+                                    text = customer.name.take(1).uppercase(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryPurple
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = if (isBangla) "গ্রাহক লেজার / STATEMENT" else "Customer Ledger Statement",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "${customer.name} • ${customer.customerCode} • ${customer.phone}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = TextMuted)
@@ -238,8 +289,38 @@ fun CustomerLedgerDialog(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (customer.outstandingBalanceMinor > 0) {
+                            Button(
+                                onClick = { onSendDueReminder(customer) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    if (isBangla) "ভদ্র তাগাদা (WhatsApp)" else "Due Reminder (WhatsApp)",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { onShareWhatsAppStatement(customer) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF128C7E)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (isBangla) "WhatsApp স্টেটমেন্ট" else "WhatsApp Statement", fontSize = 12.sp)
+                        }
+                    }
+
                     TextButton(onClick = onDismiss) {
                         Text(if (isBangla) "বন্ধ করুন" else "Close", color = TextSecondary)
                     }

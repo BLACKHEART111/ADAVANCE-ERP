@@ -427,6 +427,34 @@ fun SalesScreen(
             onDismiss = {
                 showCustomerLedgerDialog = false
                 ledgerCustomer = null
+            },
+            onShareWhatsAppStatement = { cust ->
+                viewModel.openDueCollectionStatementShare(cust)
+            },
+            onSendDueReminder = { cust ->
+                viewModel.openDueReminder(cust)
+            }
+        )
+    }
+
+    // Due Collection Statement & WhatsApp Share Dialog
+    if (uiState.activeDueCollectionData != null) {
+        DueCollectionStatementShareDialog(
+            data = uiState.activeDueCollectionData!!,
+            initialIsBangla = isBangla,
+            onDismiss = {
+                viewModel.dismissDueCollectionDialog()
+            }
+        )
+    }
+
+    // Polite Due Reminder & WhatsApp Share Dialog
+    if (uiState.activeDueReminderData != null) {
+        DueReminderDialog(
+            data = uiState.activeDueReminderData!!,
+            initialIsBangla = isBangla,
+            onDismiss = {
+                viewModel.dismissDueReminderDialog()
             }
         )
     }

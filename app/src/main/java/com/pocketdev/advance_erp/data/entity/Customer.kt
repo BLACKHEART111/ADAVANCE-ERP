@@ -22,6 +22,7 @@ data class Customer(
     val address: String,
     val creditLimitMinor: Long = 0L,
     val outstandingBalanceMinor: Long = 0L,
+    val profileImagePath: String? = null,
     val isActive: Boolean = true,
     val createdAt: Long = System.currentTimeMillis()
 )

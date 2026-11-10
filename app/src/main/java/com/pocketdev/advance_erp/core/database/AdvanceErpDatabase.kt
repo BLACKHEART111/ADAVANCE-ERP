@@ -141,7 +141,7 @@ import com.pocketdev.advance_erp.data.entity.WarehouseReceiptItem
         InventoryReconciliation::class,
         InventoryReconciliationItem::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 abstract class AdvanceErpDatabase : RoomDatabase() {
@@ -205,7 +205,8 @@ abstract class AdvanceErpDatabase : RoomDatabase() {
                     DatabaseMigrations.MIGRATION_5_6,
                     DatabaseMigrations.MIGRATION_6_7,
                     DatabaseMigrations.MIGRATION_7_8,
-                    DatabaseMigrations.MIGRATION_8_9
+                    DatabaseMigrations.MIGRATION_8_9,
+                    DatabaseMigrations.MIGRATION_9_10
                 )
                 .addCallback(object : Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {

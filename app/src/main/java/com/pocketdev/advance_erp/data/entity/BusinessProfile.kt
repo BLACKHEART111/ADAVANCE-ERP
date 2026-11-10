@@ -13,5 +13,6 @@ data class BusinessProfile(
     val email: String? = null,
     val address: String,
     val defaultCurrency: String = "BDT",
+    val logoPath: String? = null,
     val updatedAt: Long = System.currentTimeMillis()
 )

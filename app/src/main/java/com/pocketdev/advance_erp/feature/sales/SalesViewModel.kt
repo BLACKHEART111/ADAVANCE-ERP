@@ -5,6 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pocketdev.advance_erp.core.datastore.UserPreferencesRepository
 import com.pocketdev.advance_erp.core.model.AppLanguage
+import com.pocketdev.advance_erp.core.pdf.CentralizedPdfEngine
+import com.pocketdev.advance_erp.core.pdf.CentralizedPdfReportRegistry
+import com.pocketdev.advance_erp.core.util.DueCollectionStatementData
+import com.pocketdev.advance_erp.core.util.DueReminderStatementData
 import com.pocketdev.advance_erp.core.util.InvoicePdfGenerator
 import com.pocketdev.advance_erp.data.dao.BusinessProfileDao
 import com.pocketdev.advance_erp.data.dao.CustomerDao
@@ -33,6 +37,7 @@ import com.pocketdev.advance_erp.domain.repository.SalesReportSummary
 import com.pocketdev.advance_erp.domain.repository.SalesRepository
 import com.pocketdev.advance_erp.domain.repository.SalesReturnDraft
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,11 +69,14 @@ data class SalesUiState(
     val nextPaymentNumber: String? = null,
     val language: AppLanguage = AppLanguage.BANGLA,
     val isLoading: Boolean = false,
-    val userMessage: String? = null
+    val userMessage: String? = null,
+    val activeDueCollectionData: DueCollectionStatementData? = null,
+    val activeDueReminderData: DueReminderStatementData? = null
 )
 
 @HiltViewModel
 class SalesViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val salesRepository: SalesRepository,
     private val productRepository: ProductRepository,
     private val productVariantDao: ProductVariantDao,
@@ -273,14 +281,60 @@ class SalesViewModel @Inject constructor(
     fun recordPayment(draft: CustomerPaymentDraft, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             try {
+                val customer = _uiState.value.customers.find { it.id == draft.customerId }
+                    ?: customerDao.getCustomerById(draft.customerId)
+                val prevDue = customer?.outstandingBalanceMinor ?: 0L
+
                 val paymentNumber = salesRepository.recordCustomerPayment(draft)
                 val isBn = _uiState.value.language == AppLanguage.BANGLA
                 val nextNum = runCatching { salesRepository.previewNextCustomerPaymentNumber() }.getOrNull()
+
+                // Fetch updated ledger to guarantee exact source synchronization
+                val ledger = salesRepository.getCustomerLedger(draft.customerId)
+                val updatedCustomer = customerDao.getCustomerById(draft.customerId) ?: customer
+                val currentDue = ledger.lastOrNull()?.runningBalanceMinor ?: (updatedCustomer?.outstandingBalanceMinor ?: (prevDue - draft.amountMinor))
+                val isAdv = currentDue < 0L
+
+                // Generate detailed customer ledger PDF statement
+                val pdfFile = runCatching {
+                    if (updatedCustomer != null) {
+                        val pdfReport = CentralizedPdfReportRegistry.buildCustomerLedgerReport(
+                            customer = updatedCustomer,
+                            entries = ledger,
+                            isBangla = isBn
+                        )
+                        CentralizedPdfEngine.generatePdf(context, pdfReport, _uiState.value.businessProfile)
+                    } else null
+                }.getOrNull()
+
+                val profile = _uiState.value.businessProfile
+                val stmtData = DueCollectionStatementData(
+                    customerId = draft.customerId,
+                    customerName = updatedCustomer?.name ?: "Customer",
+                    customerPhone = updatedCustomer?.phone,
+                    customerCode = updatedCustomer?.customerCode ?: "",
+                    companyName = profile?.companyName ?: "ADVANCE ERP",
+                    companyPhone = profile?.phone ?: "",
+                    paymentNumber = paymentNumber,
+                    paymentDate = draft.paymentDate,
+                    paymentMethod = draft.paymentMethod,
+                    amountReceivedMinor = draft.amountMinor,
+                    previousDueMinor = prevDue,
+                    currentDueMinor = currentDue,
+                    isFullPayment = prevDue > 0L && currentDue == 0L,
+                    isPartialPayment = currentDue > 0L && prevDue > currentDue,
+                    isAdvancePayment = isAdv,
+                    advanceAmountMinor = if (isAdv) kotlin.math.abs(currentDue) else 0L,
+                    referenceNote = draft.referenceNote,
+                    statementPdfFile = pdfFile
+                )
+
                 _uiState.update {
                     it.copy(
                         userMessage = if (isBn) "পেমেন্ট রশিদ সফলভাবে সংরক্ষিত হয়েছে: #$paymentNumber"
                                       else "Payment receipt recorded successfully: #$paymentNumber",
-                        nextPaymentNumber = nextNum
+                        nextPaymentNumber = nextNum,
+                        activeDueCollectionData = stmtData
                     )
                 }
                 if (_uiState.value.selectedInvoice != null) {
@@ -293,6 +347,93 @@ class SalesViewModel @Inject constructor(
                 _uiState.update { it.copy(userMessage = "Payment failed: ${e.message}") }
             }
         }
+    }
+
+    fun openDueCollectionStatementShare(customer: Customer, recentPayment: CustomerPayment? = null) {
+        viewModelScope.launch {
+            try {
+                val ledger = salesRepository.getCustomerLedger(customer.id)
+                val isBn = _uiState.value.language == AppLanguage.BANGLA
+                val pdfReport = CentralizedPdfReportRegistry.buildCustomerLedgerReport(
+                    customer = customer,
+                    entries = ledger,
+                    isBangla = isBn
+                )
+                val pdfFile = CentralizedPdfEngine.generatePdf(context, pdfReport, _uiState.value.businessProfile)
+                val profile = _uiState.value.businessProfile
+                val currentDue = ledger.lastOrNull()?.runningBalanceMinor ?: customer.outstandingBalanceMinor
+                val amountReceived = recentPayment?.amountMinor ?: 0L
+                val prevDue = if (amountReceived > 0L) currentDue + amountReceived else currentDue
+                val isAdv = currentDue < 0L
+
+                val stmtData = DueCollectionStatementData(
+                    customerId = customer.id,
+                    customerName = customer.name,
+                    customerPhone = customer.phone,
+                    customerCode = customer.customerCode,
+                    companyName = profile?.companyName ?: "ADVANCE ERP",
+                    companyPhone = profile?.phone ?: "",
+                    paymentNumber = recentPayment?.paymentNumber ?: "STMT-${System.currentTimeMillis() % 100000}",
+                    paymentDate = recentPayment?.paymentDate ?: System.currentTimeMillis(),
+                    paymentMethod = recentPayment?.paymentMethod ?: "CASH",
+                    amountReceivedMinor = amountReceived,
+                    previousDueMinor = prevDue,
+                    currentDueMinor = currentDue,
+                    isFullPayment = prevDue > 0L && currentDue == 0L,
+                    isPartialPayment = currentDue > 0L && prevDue > currentDue,
+                    isAdvancePayment = isAdv,
+                    advanceAmountMinor = if (isAdv) kotlin.math.abs(currentDue) else 0L,
+                    referenceNote = recentPayment?.referenceNote,
+                    statementPdfFile = pdfFile
+                )
+                _uiState.update { it.copy(activeDueCollectionData = stmtData) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun dismissDueCollectionDialog() {
+        _uiState.update { it.copy(activeDueCollectionData = null) }
+    }
+
+    fun openDueReminder(customer: Customer) {
+        viewModelScope.launch {
+            try {
+                val ledger = salesRepository.getCustomerLedger(customer.id)
+                val isBn = _uiState.value.language == AppLanguage.BANGLA
+                val pdfReport = CentralizedPdfReportRegistry.buildCustomerLedgerReport(
+                    customer = customer,
+                    entries = ledger,
+                    isBangla = isBn
+                )
+                val pdfFile = CentralizedPdfEngine.generatePdf(context, pdfReport, _uiState.value.businessProfile)
+                val profile = _uiState.value.businessProfile
+                val currentDue = customer.outstandingBalanceMinor
+                val invoiceCount = ledger.count { it.transactionType == "INVOICE" }
+
+                val reminderData = DueReminderStatementData(
+                    customerId = customer.id,
+                    customerName = customer.name,
+                    customerPhone = customer.phone,
+                    customerCode = customer.customerCode,
+                    companyName = profile?.companyName ?: "ADVANCE ERP",
+                    companyPhone = profile?.phone ?: "",
+                    totalDueMinor = currentDue,
+                    invoiceCount = invoiceCount,
+                    asOfDate = System.currentTimeMillis(),
+                    paymentInstructions = if (isBn) "বিকাশ / নগদ / ব্যাংক অ্যাকাউন্টের মাধ্যমে পরিশোধ করা যাবে। বিস্তারিত জানতে যোগাযোগ করুন।" else "Payments accepted via Bank Transfer, bKash or Cash. Contact us for details.",
+                    pdfFile = pdfFile
+                )
+                _uiState.update { it.copy(activeDueReminderData = reminderData) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(userMessage = "Due reminder preparation failed: ${e.message}") }
+            }
+        }
+    }
+
+    fun dismissDueReminderDialog() {
+        _uiState.update { it.copy(activeDueReminderData = null) }
     }
 
     fun processReturn(draft: SalesReturnDraft, onSuccess: () -> Unit = {}) {
